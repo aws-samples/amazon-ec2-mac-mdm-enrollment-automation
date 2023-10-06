@@ -19,7 +19,6 @@ on MMSecretVar()
 	on error
 		--Change what's in the quotes below to the name or ARN of your AWS Secrets Manager secret if coding in here.
 		set MMSecret to "jamfSecret"
-		--Using a local plist? Change MMSecret above to the key. See below for plist setup.
 	end try
 	return MMSecret
 end MMSecretVar
@@ -73,8 +72,6 @@ on retrieveSecret(secretRegion, secretID, secretQueryKey)
 	--By default, uses AWS Secrets Manager to retrieve the secret. A preference can be set via terminal to change.
 	--To use AWS Systems Manager Parameter Store:
 	--defaults write com.amazon.dsx.ec2.enrollment.automation retrievalType ParameterStore
-	--To use a local base64-encoded plist:
-	--defaults write com.amazon.dsx.ec2.enrollment.automation retrievalType plist
 	try
 		set retrievalType to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation retrievalType")
 	on error
@@ -340,17 +337,7 @@ on run argv
 	
 	--By default, enroll-ec2-mac uses AWS Secrets manager to retrieve credentials for runtime.
 	
-	--If using local values for credentials, set them uncommented below, and comment out/remove everything between the CREDENTIAL RETRIEVAL ROUTINES lines below.
-	
-	(*set jamfServerDomain to "myjamfinstance.jamfcloud.com"
-	set SDKUser to "myjamfusername"
-	set SDKPassword to "myjamfpassword"
-	tell application "System Events" to set localAdmin to (name of current user)
-	set adminPass to "mytempadmin"*)
-	
-	--Want to use a local plist for credentials instead? Check out the repository for a script to set up!	
-	
-	--Remember to set the ID of your secret in the MMSecretVar subroutine (or via the defaults write instruction) at the very top. See repository for CloudFormation and Terraform templates for IAM and Secrets/Parameter Store entries, and the retrieveSecret subroutine above on how to set which one you're using.
+	--Remember to set the ID of your secret in the MMSecretVar subroutine (or via the defaults write instruction) at the very top. See repository for CloudFormation and Terraform templates for IAM and Secrets Manager/Parameter Store entries.
 	
 	--BEGIN CREDENTIAL RETRIEVAL ROUTINES--
 	
@@ -452,7 +439,7 @@ on run argv
 		--Disables the Jamf VM flag, which separates records from MDM enrollments.
 		do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
 		
-				--Creates a directory that the Jamf binary needs to function on mac1 instances.
+		--Creates a directory that the Jamf binary needs to function on mac1 instances.
 		try
 			do shell script "mkdir -p /private/var/db/locationd" user name localAdmin password adminPass with administrator privileges
 		end try
@@ -1003,7 +990,7 @@ on run argv
 			do shell script "launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist" user name localAdmin password adminPass with administrator privileges
 			
 			if testFlag is not 1 then
-				--Cleanup routines. The tccutil resets are total due to "osascript" not being a valid bundle ID that tccutil understands. Could be overcome with a compiled AppleScript bundle, though…
+				--Cleanup routines. The tccutil full resets are total due to "osascript" not being a valid bundle ID that tccutil understands. Could be overcome with a compiled AppleScript bundle, though…
 				my visiLog("Command: DeterminateManual", "4", localAdmin, adminPass)
 				my visiLog("Command: DeterminateManualStep", "4", localAdmin, adminPass)
 				my visiLog("Command: MainText", "Cleaning up…", localAdmin, adminPass)
@@ -1016,7 +1003,7 @@ on run argv
 				try
 					do shell script "sysadminctl -autologin off" user name localAdmin password adminPass with administrator privileges
 				end try
-				--Removes ID/secret in plist, if any.
+				--Removes secret ID in plist.
 				try
 					do shell script "defaults delete com.amazon.dsx.ec2.enrollment.automation"
 				end try
