@@ -1,6 +1,6 @@
 # enroll-ec2-mac: Welcome!
 
-enroll-ec2-mac is an AppleScript made to **automatically enroll** Amazon Web Services Elastic Compute Cloud (EC2) Mac instances into a mobile device management (**MDM**) solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken via device enrollment enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included is a subroutine to automate the issuance and retrieval of **Jamf** enrollment profiles. 
+enroll-ec2-mac is an AppleScript made to **automatically enroll** Amazon Web Services Elastic Compute Cloud (EC2) Mac instances into a mobile device management (**MDM**) solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken for MDM enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included is a subroutine to automate the issuance and retrieval of **Jamf** enrollment profiles. 
 
 ---
 
@@ -58,7 +58,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. Follow the linked instructions to **Create a Linux AMI from an instance** (instructions also cover macOS instances).
     2. Workflow was tested with **“No reboot”** enabled.
         - *Note: if the instance is rebooted or logged out after clicking OK,* **enrollment will occur.**
-    3. Ensure “Delete on termination” is **unchecked** to keep the AMI after terminating the original instance.
+    3. Ensure “Delete on termination” is **unchecked** to keep the AMI after terminating the template instance.
 11. When AMI moves from **Pending** to **Available**, launch a new instance with the AMI. 
     1. This process may take an hour or more.
     2. Ensure the newly launched instance has the appropriate **㊙️🪪 IAM instance profile** to retrieve the credentials.
@@ -88,8 +88,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 - `MMSecret` is the ID of the secret for enroll-ec2-mac to read from. (default `jamfSecret`)
 - `invitationID` is a value for the Jamf invitation ID (numeric string). By default this is read/generated via Jamf API, but can be manually set.
 - - *Note: If an invitation ID is set, the Jamf API **will not be called.***
-- `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store) or `plist` (local values written with LocalSecret/StageHand) (default `SecretsManager`)
-- - `retrievalPath` is used for the `plist` option, and contains the base64-encoded credential file.
+- `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store). (default `SecretsManager`)
 - `useDEPNotify` deactivates (if set to false) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `false` when the `--no-screen` flag is used. (default `true`)
 - `autoLogin` enables/disables automatic login of the stored user. This has not been reliably automated in some versions of macOS, and is still recommended as a manual step taken during setup regardless of this setting. (default `true`)
 
