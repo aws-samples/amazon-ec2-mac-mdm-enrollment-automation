@@ -1,4 +1,6 @@
---enroll-ec2-mac, an AppleScript workflow to enroll EC2 Mac instances into MDM.
+-- enroll-ec2-mac, an AppleScript workflow to enroll EC2 Mac instances into MDM.
+-- Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+-- SPDX-License-Identifier: MIT-0
 
 --This script requires permissions to run, and will prompt automatically as part of setup.
 
