@@ -254,12 +254,22 @@ on jamfEnrollmentProfile(jamfInvitationID, jamfEnrollmentURL)
 end jamfEnrollmentProfile
 
 on authCallToken(jamfServer, APIName, APIPass)
-	set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "api/v1/auth/token' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
-	set AppleScript's text item delimiters to ","
-	set {authToken, authTime} to text items of authCall
-	set AppleScript's text item delimiters to ""
-	set authToken to (do shell script " echo " & authToken & " | sed -e 's/^M//g'")
-	set authToken to (characters 2 through end of authToken) as string
+	try
+	--Attempts to connect via Jamf Client Credentials.
+		set authCall to (do shell script "curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' '" & jamfServer & "api/oauth/token' --data-urlencode 'client_id=" & APIName & "' --data-urlencode 'client_secret=" & APIPass & "' --data-urlencode 'grant_type=client_credentials'")
+		set AppleScript's text item delimiters to "_token\":\""
+		set transitionalToken to text item 2 of authCall
+		set AppleScript's text item delimiters to "\",\"scope"
+		set authToken to text item 1 of transitionalToken as string
+	on error
+	--If previous fails, authenticate with username and password.
+		set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "uapi/auth/tokens' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
+		set AppleScript's text item delimiters to ","
+		set {authToken, authTime} to text items of authCall
+		set AppleScript's text item delimiters to ""
+		set authToken to (do shell script " echo " & authToken & " | sed -e 's/^M//g'")
+		set authToken to (characters 2 through end of authToken) as string
+	end try
 	return authToken
 end authCallToken
 
