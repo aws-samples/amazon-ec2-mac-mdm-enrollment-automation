@@ -16,7 +16,8 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
-        1. This is a user account in the **Jamf** console, and only requires **Create** permission for **Computer Invitations**.
+        1. This is an API client or user account in the **Jamf** console, and its role only requires **Create** permission for **Computer Invitations**.
+        2. If using Jamf API Client Credentials, `jamfEnrollmentUser` is the **Client ID** and `jamfEnrollmentPassword` is the **Client Secret**.
     4. `localAdmin` `("ec2-user")`
         1. The default is `ec2-user` unless a change is made outside of these instructions. Must be an administrator account.
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
@@ -98,7 +99,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 
 enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the Jamf URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance needs an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets, as well. 
 
-The Jamf API user account for enroll-ec2-mac *only* requires the **Create** permission for **Computer Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
+The Jamf API client or user account for enroll-ec2-mac *only* requires the **Create** permission for **Computer Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
 
 ---
 
