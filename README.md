@@ -1,6 +1,10 @@
 # enroll-ec2-mac: Welcome!
 
-enroll-ec2-mac is an AppleScript made to **automatically enroll** Amazon Web Services Elastic Compute Cloud (EC2) Mac instances into a mobile device management (**MDM**) solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken for MDM enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included is a subroutine to automate the issuance and retrieval of **Jamf** enrollment profiles. 
+enroll-ec2-mac is an AppleScript made to **automatically enroll** [Amazon Web Services Elastic Compute Cloud (EC2) Mac instances](https://aws.amazon.com/ec2/instance-types/mac/) into a **mobile device management (MDM)** solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken for MDM enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included is a subroutine to automate the issuance and retrieval of **Jamf** enrollment profiles. 
+
+---
+
+#### Learn more about Amazon EC2 Mac instances [here!](https://github.com/aws-samples/amazon-ec2-mac-getting-started/tree/main/apps-and-scripts)
 
 ---
 
@@ -16,7 +20,8 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
-        1. This is a user account in the **Jamf** console, and only requires **Create** permission for **Computer Invitations**.
+        1. This is an API client or user account in the **Jamf** console, and its role only requires **Create** permission for **Computer Invitations**.
+        2. If using Jamf API Client Credentials, `jamfEnrollmentUser` is the **Client ID** and `jamfEnrollmentPassword` is the **Client Secret**.
     4. `localAdmin` `("ec2-user")`
         1. The default is `ec2-user` unless a change is made outside of these instructions. Must be an administrator account.
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
@@ -98,7 +103,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 
 enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the Jamf URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance needs an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets, as well. 
 
-The Jamf API user account for enroll-ec2-mac *only* requires the **Create** permission for **Computer Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
+The Jamf API client or user account for enroll-ec2-mac *only* requires the **Create** permission for **Computer Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
 
 ---
 

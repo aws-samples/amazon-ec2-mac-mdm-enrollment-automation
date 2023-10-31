@@ -270,6 +270,9 @@ on authCallToken(jamfServer, APIName, APIPass)
 		set authToken to (do shell script " echo " & authToken & " | sed -e 's/^M//g'")
 		set authToken to (characters 2 through end of authToken) as string
 	end try
+	if authToken is "401" then
+		return "401 Unauthorized"
+	end if
 	return authToken
 end authCallToken
 
