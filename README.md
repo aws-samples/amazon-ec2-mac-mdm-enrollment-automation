@@ -20,8 +20,9 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
-        1. This is an API client or user account in the **Jamf** console, and its role only requires **Create** permission for **Computer Invitations**.
-        2. If using Jamf API Client Credentials, `jamfEnrollmentUser` is the **Client ID** and `jamfEnrollmentPassword` is the **Client Secret**.
+        * This is an API client or user account in the **Jamf** console, and its role only requires **Create** permission for **Computer Invitations**.
+        * If using Jamf API Client Credentials, fill the `jamfEnrollmentUser` field with the **Client ID** and `jamfEnrollmentPassword` with the **Client Secret**.
+        * Additional permissions for Jamf account are required for other API features, such as preloading information and removing device records.
     4. `localAdmin` `("ec2-user")`
         1. The default is `ec2-user` unless a change is made outside of these instructions. Must be an administrator account.
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
