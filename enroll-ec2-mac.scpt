@@ -253,6 +253,16 @@ on jamfEnrollmentProfile(jamfInvitationID, jamfEnrollmentURL)
 	return (profileReturn) as string
 end jamfEnrollmentProfile
 
+on jamfInventoryPreload(jamfServerContact, passedAuthToken, deviceSerial, attributeName, attributeValue)
+	--Currently set to provide a single attribute, but can be expanded to any and all Inventory Preload fields.
+	set preloadJSON to ("{\"serialNumber\": \"" & deviceSerial & "\",\"deviceType\": \"Computer\",\"" & attributeName & "\": \"" & attributeValue & "\"}")
+	set preloadReturn to (do shell script "curl -X POST " & jamfServerContact & "uapi/v2/inventory-preload/records -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
+	if preloadReturn contains "DUPLICATE_FIELD" then
+		set preloadRecordID to (do shell script "curl -X GET '" & jamfServerContact & "uapi/v2/inventory-preload/records?page-size=100&sort=id%3Adesc' -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "' | grep -B 1 " & deviceSerial & " | awk {'print $3'} | head -n 1 | sed \"s/['/\\\",\\ ]*//g\"")
+		set preloadReturn to (do shell script "curl -X PUT " & jamfServerContact & "uapi/v2/inventory-preload/records/" & preloadRecordID & " -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
+	end if
+end jamfInventoryPreload
+
 on authCallToken(jamfServer, APIName, APIPass)
 	try
 	--Attempts to connect via Jamf Client Credentials.
@@ -262,16 +272,16 @@ on authCallToken(jamfServer, APIName, APIPass)
 		set AppleScript's text item delimiters to "\",\"scope"
 		set authToken to text item 1 of transitionalToken as string
 	on error
-	--If previous fails, authenticate with username and password.
+			set authToken to "401 Unauthorized"
+	end try
+	if authToken starts with "401" then
+		--If previous fails, try to authenticate with username and password.
 		set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "uapi/auth/tokens' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
 		set AppleScript's text item delimiters to ","
 		set {authToken, authTime} to text items of authCall
 		set AppleScript's text item delimiters to ""
 		set authToken to (do shell script " echo " & authToken & " | sed -e 's/^M//g'")
 		set authToken to (characters 2 through end of authToken) as string
-	end try
-	if authToken is "401" then
-		return "401 Unauthorized"
 	end if
 	return authToken
 end authCallToken
@@ -715,7 +725,7 @@ on run argv
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
 			
 			--------BEGIN JAMF PROFILE ROUTINES--------
-			
+
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
 			
@@ -774,7 +784,15 @@ on run argv
 			
 			--Disable the auto-check for VMs, which separates profiles from agent enrollments.
 			do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
-			
+
+			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions)
+			set preloadFlag to "vendor"
+			set preloadValue to "AWS"
+			set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
+			try
+				my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
+			end try
+
 			--------END JAMF PROFILE ROUTINES--------
 			
 			--Opens the profile, bringing the UI notification up.
