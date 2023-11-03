@@ -80,7 +80,7 @@ on retrieveSecret(secretRegion, secretID, secretQueryKey)
 		set retrievalType to "SecretsManager"
 	end try
 	if retrievalType contains "SecretsManager" then
-		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws secretsmanager get-secret-value --region " & secretRegion & " --secret-id " & secretID & " --query SecretString")
+		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws secretsmanager get-secret-value --region " & secretRegion & " --secret-id '" & secretID & "' --query SecretString")
 	else if retrievalType contains "ParameterStore" then
 		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws ssm get-parameter --region " & secretRegion & " --name \"" & secretID & "\" --query 'Parameter.Value'")
 	else if retrievalType contains "plist" then
@@ -253,6 +253,16 @@ on jamfEnrollmentProfile(jamfInvitationID, jamfEnrollmentURL)
 	return (profileReturn) as string
 end jamfEnrollmentProfile
 
+on jamfInventoryPreload(jamfServerContact, passedAuthToken, deviceSerial, attributeName, attributeValue)
+	--Currently set to provide a single attribute, but can be expanded to any and all Inventory Preload fields.
+	set preloadJSON to ("{\"serialNumber\": \"" & deviceSerial & "\",\"deviceType\": \"Computer\",\"" & attributeName & "\": \"" & attributeValue & "\"}")
+	set preloadReturn to (do shell script "curl -X POST " & jamfServerContact & "uapi/v2/inventory-preload/records -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
+	if preloadReturn contains "DUPLICATE_FIELD" then
+		set preloadRecordID to (do shell script "curl -X GET '" & jamfServerContact & "uapi/v2/inventory-preload/records?page-size=100&sort=id%3Adesc' -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "' | grep -B 1 " & deviceSerial & " | awk {'print $3'} | head -n 1 | sed \"s/['/\\\",\\ ]*//g\"")
+		set preloadReturn to (do shell script "curl -X PUT " & jamfServerContact & "uapi/v2/inventory-preload/records/" & preloadRecordID & " -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
+	end if
+end jamfInventoryPreload
+
 on authCallToken(jamfServer, APIName, APIPass)
 	try
 	--Attempts to connect via Jamf Client Credentials.
@@ -262,16 +272,16 @@ on authCallToken(jamfServer, APIName, APIPass)
 		set AppleScript's text item delimiters to "\",\"scope"
 		set authToken to text item 1 of transitionalToken as string
 	on error
-	--If previous fails, authenticate with username and password.
+			set authToken to "401 Unauthorized"
+	end try
+	if authToken starts with "401" then
+		--If previous fails, try to authenticate with username and password.
 		set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "uapi/auth/tokens' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
 		set AppleScript's text item delimiters to ","
 		set {authToken, authTime} to text items of authCall
 		set AppleScript's text item delimiters to ""
 		set authToken to (do shell script " echo " & authToken & " | sed -e 's/^M//g'")
 		set authToken to (characters 2 through end of authToken) as string
-	end try
-	if authToken is "401" then
-		return "401 Unauthorized"
 	end if
 	return authToken
 end authCallToken
@@ -674,6 +684,7 @@ on run argv
 				do shell script "rm -f /var/tmp/depnotify.log" user name localAdmin password adminPass with administrator privileges
 			end try
 			--This will be a preference soon.
+			if useDEPNotify is true then
 			set customLogo to true
 			
 			if customLogo is true then
@@ -688,7 +699,7 @@ on run argv
 			my visiLog("Status", "Starting enrollment process…", localAdmin, adminPass)
 			
 			
-			
+			end if
 			
 			--Flagged so that a cleanup doesn't happen if we're just testing.
 			set testFlag to 1
@@ -715,7 +726,7 @@ on run argv
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
 			
 			--------BEGIN JAMF PROFILE ROUTINES--------
-			
+
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
 			
@@ -774,7 +785,22 @@ on run argv
 			
 			--Disable the auto-check for VMs, which separates profiles from agent enrollments.
 			do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
-			
+
+			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
+			--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
+			--Values can be set below inline (default is setting "Vendor" to "AWS" in Purchasing tab of Jamf device records.)
+			try
+				set invPreloadFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invPreload")
+				get invPreloadFlag
+			on error
+				set invPreloadFlag to "0"
+			end try
+			if invPreloadFlag is not "0" then
+				set preloadFlag to "vendor"
+				set preloadValue to "AWS"
+				set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
+				my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
+			end if
 			--------END JAMF PROFILE ROUTINES--------
 			
 			--Opens the profile, bringing the UI notification up.
@@ -1022,6 +1048,7 @@ on run argv
 				try
 					do shell script "defaults delete com.amazon.dsx.ec2.enrollment.automation"
 				end try
+				do shell script "rm -rf /tmp/enrollmentProfile.mobileconfig user name localAdmin password adminPass with administrator privileges
 				do shell script pathPrefix & brewUpdateFlag & "brew uninstall cliclick"
 				try
 					do shell script "rm -rf " & DEPNotifyPath user name localAdmin password adminPass with administrator privileges
