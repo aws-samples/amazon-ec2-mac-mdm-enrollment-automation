@@ -80,7 +80,7 @@ on retrieveSecret(secretRegion, secretID, secretQueryKey)
 		set retrievalType to "SecretsManager"
 	end try
 	if retrievalType contains "SecretsManager" then
-		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws secretsmanager get-secret-value --region " & secretRegion & " --secret-id " & secretID & " --query SecretString")
+		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws secretsmanager get-secret-value --region " & secretRegion & " --secret-id '" & secretID & "' --query SecretString")
 	else if retrievalType contains "ParameterStore" then
 		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws ssm get-parameter --region " & secretRegion & " --name \"" & secretID & "\" --query 'Parameter.Value'")
 	else if retrievalType contains "plist" then
@@ -684,6 +684,7 @@ on run argv
 				do shell script "rm -f /var/tmp/depnotify.log" user name localAdmin password adminPass with administrator privileges
 			end try
 			--This will be a preference soon.
+			if useDEPNotify is true then
 			set customLogo to true
 			
 			if customLogo is true then
@@ -698,7 +699,7 @@ on run argv
 			my visiLog("Status", "Starting enrollment process…", localAdmin, adminPass)
 			
 			
-			
+			end if
 			
 			--Flagged so that a cleanup doesn't happen if we're just testing.
 			set testFlag to 1
@@ -785,14 +786,21 @@ on run argv
 			--Disable the auto-check for VMs, which separates profiles from agent enrollments.
 			do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
 
-			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions)
-			set preloadFlag to "vendor"
-			set preloadValue to "AWS"
-			set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
+			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
+			--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
+			--Values can be set below inline (default is setting "Vendor" to "AWS" in Purchasing tab of Jamf device records.)
 			try
-				my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
+				set invPreloadFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invPreload")
+				get invPreloadFlag
+			on error
+				set invPreloadFlag to "0"
 			end try
-
+			if invPreloadFlag is not "0" then
+				set preloadFlag to "vendor"
+				set preloadValue to "AWS"
+				set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
+				my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
+			end if
 			--------END JAMF PROFILE ROUTINES--------
 			
 			--Opens the profile, bringing the UI notification up.
@@ -1040,6 +1048,7 @@ on run argv
 				try
 					do shell script "defaults delete com.amazon.dsx.ec2.enrollment.automation"
 				end try
+				do shell script "rm -rf /tmp/enrollmentProfile.mobileconfig user name localAdmin password adminPass with administrator privileges
 				do shell script pathPrefix & brewUpdateFlag & "brew uninstall cliclick"
 				try
 					do shell script "rm -rf " & DEPNotifyPath user name localAdmin password adminPass with administrator privileges
