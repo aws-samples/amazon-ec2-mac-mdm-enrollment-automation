@@ -49,18 +49,18 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     2. Note: if you aren't using DEPNotify (see below for why), add the `--no-screen` flag to deactivate.
            - e.g. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup --no-screen`
     - *In the event the Jamf server credentials are incorrect, an error will appear halting this process. Correct these credentials to continue.*
-6. **Follow the prompts** to enable Accessibility, App Management, and Disk Access permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `testFlag` is not set to `1`.
+6. **Follow the prompts** to enable System Events, Accessibility, and App Management (if using DEPNotify permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `testFlag` is not set to `1`.
     1. After a short delay, enroll-ec2-mac will try to access all the permissions that it will need to during actual enrollment, but not performing all of the enrollment actions.
         - During this process, it is normal for the screen to flash a few times.
         - *Optional: if `useDEPNotify` is set to `false`, or the `--no-screen` flag is used, prompts for **App Management** will not appear and the screen will not flash. DEPNotify is used to keep users from interfering in the enrollment process, but is optional if automatic login is set on Apple silicon instances, since enrollment can transparently occur before a user logs in.*
     2. In the event of an error, click **Re-run** and respond to the prompts again.
     3. If a final prompt or error does not appear after some time (over 2 minutes), run the following command to reload the LaunchAgent and re-run the task:
-        - `launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.enroll-ec2-mac.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.enroll-ec2-mac.startup.plist`
+        - `launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist`
 7. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
-        - **Make sure to click OK before creating your image.** If not, enroll-ec2-mac will re-attempt setup on subsequent runs until it's clicked.
+        - **Make sure to click OK before creating your image.** If not, enroll-ec2-mac will re-attempt setup (and not enrollment) on subsequent runs until it's clicked.
 9. Optional: **disable screen sharing** via the active SSH session.
     1. `sudo launchctl disable system/com.apple.screensharing ; sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.screensharing.plist`
-10. [**Create an image**](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html) from the running instance.
+10. After clicking OK, [**Create an image**](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html) from the running instance.
     1. Follow the linked instructions to **Create a Linux AMI from an instance** (instructions also cover macOS instances).
     2. Workflow was tested with **“No reboot”** enabled.
         - *Note: if the instance is rebooted or logged out after clicking OK,* **enrollment will occur.**
@@ -69,8 +69,8 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. This process may take an hour or more.
     2. Ensure the newly launched instance has the appropriate **㊙️🪪 IAM instance profile** to retrieve the credentials.
 12. When new instance is launched, it will enroll **automatically**, and without any further intervention. 
-    1. Code in enroll-ec2-mac will auto-enable Screen Sharing when enrollment is complete, if desired.
-    2. Cleanup code additionally is available to revoke permissions used for `osascript`.
+    1. Code in enroll-ec2-mac will auto-enable Screen Sharing when enrollment is complete.
+    2. Cleanup code is available to revoke permissions used for `osascript`.
 
 
 
@@ -85,9 +85,9 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 ## Settings
 
 
-enroll-ec2-mac has some options to customize to suit your deployment. To set any of these preferences, type `defaults write com.amazon.dsx.enroll-ec2-mac `, the key, and the value. For example, to set your secret ID (the only required setting), the full command would be:
+enroll-ec2-mac has some options to customize to suit your deployment. To set any of these preferences, type `defaults write com.amazon.dsx.ec2.enrollment.automation `, the key, and the value. For example, to set your secret ID (the only required setting), the full command would be:
 
-`defaults write com.amazon.dsx.enroll-ec2-mac MMSecret "jamfSecretID-GoesHere"` 
+`defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"` 
 
 (replacing `"jamfSecretID-GoesHere"` with your secret ID or ARN)
 
@@ -97,7 +97,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 - `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store). (default `SecretsManager`)
 - `useDEPNotify` deactivates (if set to false) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `false` when the `--no-screen` flag is used. (default `true`)
 - `autoLogin` enables/disables automatic login of the stored user. This has not been reliably automated in some versions of macOS, and is still recommended as a manual step taken during setup regardless of this setting. (default `true`)
-
+- `invPreload` enables inventory preload via Jamf API. Default setting in code is to set **Vendor** to **AWS** when enabled. (default `false`)
 ---
 
 ## Manual Configuration for AWS Secrets Manager & IAM
