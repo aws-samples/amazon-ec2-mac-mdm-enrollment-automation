@@ -1048,7 +1048,7 @@ on run argv
 				try
 					do shell script "defaults delete com.amazon.dsx.ec2.enrollment.automation"
 				end try
-				do shell script "rm -rf /tmp/enrollmentProfile.mobileconfig user name localAdmin password adminPass with administrator privileges
+				do shell script "rm -rf /tmp/enrollmentProfile.mobileconfig" user name localAdmin password adminPass with administrator privileges
 				do shell script pathPrefix & brewUpdateFlag & "brew uninstall cliclick"
 				try
 					do shell script "rm -rf " & DEPNotifyPath user name localAdmin password adminPass with administrator privileges
