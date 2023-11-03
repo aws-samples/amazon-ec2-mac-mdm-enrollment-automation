@@ -41,7 +41,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 3. Enable **Automatically log in as** for the current user in **System Settings -> Users & Groups.**
 4. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
     1. Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
-        - `defaults write /Library/Preferences/com.amazon.dsx.enroll-ec2-mac MMSecret "jamfSecret-YOUR-SECRET-ID"`, replacing what's in quotes with the ID or ARN of your secret.
+        - `defaults write /Library/Preferences/com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"`, replacing what's in quotes with the ID or ARN of your secret.
         - *This secret is the one your  **㊙️🪪 IAM Instance Profile** can access.*
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
 5. In **Terminal**, type the following command: 
