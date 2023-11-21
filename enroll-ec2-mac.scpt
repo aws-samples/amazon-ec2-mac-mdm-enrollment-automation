@@ -292,7 +292,7 @@ on visiLog(updateType, logMessage, privilegedName, privilegedPass)
 		--Will only write to DEPNotify.log if useDEPNotify flag is 1.
 		set updateFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation useDEPNotify")
 	on error
-		set updateFlag to "1"
+		set updateFlag to "0"
 	end try
 	if updateFlag is "1" then
 		do shell script "echo '" & updateType & ": " & logMessage & "' >> /var/tmp/depnotify.log" user name privilegedName password privilegedPass with administrator privileges
@@ -341,15 +341,19 @@ on run argv
 	end try
 	
 	
-	--To turn off DEPNotify entirely: defaults write com.amazon.dsx.ec2.enrollment.automation useDEPNotify false
-	--Or: use --no-screen option when running (will set the preference).
+	--To turn on DEPNotify screen: defaults write com.amazon.dsx.ec2.enrollment.automation useDEPNotify true
+	--Or: use --with-screen option when running (will set the preference).
 	--Override if installing DEPNotify in a different location. 
 	
+	if argv contains "--with-screen" then
+		do shell script "defaults write com.amazon.dsx.ec2.enrollment.automation useDEPNotify true"
+		delay 0.1
+	end if
 	if argv contains "--no-screen" then
 		do shell script "defaults write com.amazon.dsx.ec2.enrollment.automation useDEPNotify false"
 		delay 0.1
 	end if
-	
+		
 	if argv contains "--setup" then
 		set argv to "--launchagent --run-agent"
 	end if
@@ -405,14 +409,14 @@ on run argv
 	try
 		set useDEPNotifyPreference to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation useDEPNotify")
 	on error
-		set useDEPNotifyPreference to "1"
+		set useDEPNotifyPreference to "0"
 	end try
-	if useDEPNotifyPreference contains "0" then
-		set useDEPNotify to false
-	else if useDEPNotifyPreference contains "false" then
-		set useDEPNotify to false
-	else
+	if useDEPNotifyPreference contains "1" then
 		set useDEPNotify to true
+	else if useDEPNotifyPreference contains "true" then
+		set useDEPNotify to true
+	else
+		set useDEPNotify to false
 	end if
 	
 	--Override this if using a different user to enroll than the one that's being automatically logged into, or if manually setting auto-login and timeout preferences.
