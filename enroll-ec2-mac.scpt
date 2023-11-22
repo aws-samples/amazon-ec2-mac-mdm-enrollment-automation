@@ -265,14 +265,14 @@ end jamfInventoryPreload
 
 on authCallToken(jamfServer, APIName, APIPass)
 	try
-	--Attempts to connect via Jamf Client Credentials.
+		--Attempts to connect via Jamf Client Credentials.
 		set authCall to (do shell script "curl -X POST -H 'Content-Type: application/x-www-form-urlencoded' '" & jamfServer & "api/oauth/token' --data-urlencode 'client_id=" & APIName & "' --data-urlencode 'client_secret=" & APIPass & "' --data-urlencode 'grant_type=client_credentials'")
 		set AppleScript's text item delimiters to "_token\":\""
 		set transitionalToken to text item 2 of authCall
 		set AppleScript's text item delimiters to "\",\"scope"
 		set authToken to text item 1 of transitionalToken as string
 	on error
-			set authToken to "401 Unauthorized"
+		set authToken to "401 Unauthorized"
 	end try
 	if authToken starts with "401" then
 		--If previous fails, try to authenticate with username and password.
@@ -312,22 +312,36 @@ end brewPrivilegeRepair
 
 on clickCheck(prependPath)
 	set appToCheck to "cliclick"
-	try
-		set appCheckPath to do shell script prependPath & "which " & appToCheck
+	set isAppInstalled to null
+	--Including static check to prevent unneeded calls to homebrew.
+	set preBinaryCheck to (do shell script "test -f /Users/Shared/._enroll-ec2-mac/" & appToCheck & " && echo '" & appToCheck & " successfully found' || echo '" & appToCheck & " not found'")
+	if preBinaryCheck contains "successfully" then
 		set isAppInstalled to true
-	on error
-		try
-			set appCheckPath to do shell script prependPath & "brew list"
-		on error
-			set isAppInstalled to false
-			set appCheckPath to ""
-		end try
-		if appCheckPath does not contain appToCheck then
-			set isAppInstalled to false
-		else
+	end if
+	if isAppInstalled is not true then
+		set binaryCheck to (do shell script "test -f /opt/homebrew/bin/" & appToCheck & " && echo '" & appToCheck & " successfully found' || echo '" & appToCheck & " not found'")
+		if binaryCheck contains "successfully" then
 			set isAppInstalled to true
 		end if
-	end try
+		if isAppInstalled is not true then
+			try
+				set appCheckPath to do shell script prependPath & "which " & appToCheck
+				set isAppInstalled to true
+			on error
+				try
+					set appCheckPath to do shell script prependPath & "brew list"
+				on error
+					set isAppInstalled to false
+					set appCheckPath to ""
+				end try
+				if appCheckPath does not contain appToCheck then
+					set isAppInstalled to false
+				else
+					set isAppInstalled to true
+				end if
+			end try
+		end if
+	end if
 	return isAppInstalled
 end clickCheck
 
@@ -353,7 +367,7 @@ on run argv
 		do shell script "defaults write com.amazon.dsx.ec2.enrollment.automation useDEPNotify false"
 		delay 0.1
 	end if
-		
+	
 	if argv contains "--setup" then
 		set argv to "--launchagent --run-agent"
 	end if
@@ -385,7 +399,7 @@ on run argv
 	
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
-	set pathPossibilities to "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin"
+	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
 	set pathPrefix to "PATH=" & pathPossibilities & " ; "
 	
 	
@@ -543,9 +557,7 @@ on run argv
 			if macOSMajor is greater than or equal to 13 then
 				set clickInstalled to my clickCheck(pathPrefix)
 				tell application "System Events"
-					if clickInstalled is false then
-						set accessTotal to (accessTotal + 1)
-					else
+					if clickInstalled is not true then
 						log "Preinstalling helper app…"
 						try
 							do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
@@ -556,18 +568,24 @@ on run argv
 							do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
 						end try
 						set accessTotal to (accessTotal + 1)
+					else
+						try
+							tell application settingsApp to activate
+							delay 2
+							tell application "System Events" to tell process settingsApp to tell window 1
+								set {xPosition, yPosition} to position
+								set {xSize, ySize} to size
+							end tell
+							delay 0.5
+							try
+								do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+							on error
+								do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
+								do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+							end try
+						end try
+						set accessTotal to (accessTotal + 1)
 					end if
-					tell application "System Events" to tell process settingsApp to tell window 1
-						set {xPosition, yPosition} to position
-						set {xSize, ySize} to size
-					end tell
-					delay 0.5
-					try
-						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
-					on error
-						do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
-						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
-					end try
 				end tell
 			else
 				set accessTotal to (accessTotal + 1)
@@ -687,22 +705,33 @@ on run argv
 			try
 				do shell script "rm -f /var/tmp/depnotify.log" user name localAdmin password adminPass with administrator privileges
 			end try
-			--This will be a preference soon.
 			if useDEPNotify is true then
-			set customLogo to true
-			
-			if customLogo is true then
-				set logoURL to "https://d1.awsstatic.com/logos/Site-Merch_EC2-Mac_Editorial.1231c2e7720ac6bd5abb6d419dff0ad85bf95801.png"
-				do shell script "curl -s " & logoURL & " > /tmp/logo.png"
-				my visiLog("Command: Image", "/tmp/logo.png", localAdmin, adminPass)
-			end if
-			my visiLog("Command: MainTitle", appName, localAdmin, adminPass)
-			my visiLog("Command: WindowStyle", "NotMovable", localAdmin, adminPass)
-			my visiLog("Command: WindowStyle", "ActivateOnStep", localAdmin, adminPass)
-			my visiLog("Command: MainText", "Now enrolling, please wait…", localAdmin, adminPass)
-			my visiLog("Status", "Starting enrollment process…", localAdmin, adminPass)
-			
-			
+				--To use a custom logo with DEPNotify: 
+				--defaults write com.amazon.dsx.ec2.enrollment.automation customLogo 1
+				--defaults write com.amazon.dsx.ec2.enrollment.automation customLogoURL "https://…"
+				try
+					set customLogo to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation customLogo")
+				on error
+					set customLogo to "0"
+				end try
+				
+				
+				if customLogo is "1" then
+					try
+						set customLogoURL to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation customLogoURL")
+					on error
+						set customLogoURL to "https://d1.awsstatic.com/logos/Site-Merch_EC2-Mac_Editorial.1231c2e7720ac6bd5abb6d419dff0ad85bf95801.png"
+					end try
+					do shell script "curl -s " & customLogoURL & " > /tmp/logo.png"
+					my visiLog("Command: Image", "/tmp/logo.png", localAdmin, adminPass)
+				end if
+				my visiLog("Command: MainTitle", appName, localAdmin, adminPass)
+				my visiLog("Command: WindowStyle", "NotMovable", localAdmin, adminPass)
+				my visiLog("Command: WindowStyle", "ActivateOnStep", localAdmin, adminPass)
+				my visiLog("Command: MainText", "Now enrolling, please wait…", localAdmin, adminPass)
+				my visiLog("Status", "Starting enrollment process…", localAdmin, adminPass)
+				
+				
 			end if
 			
 			--Flagged so that a cleanup doesn't happen if we're just testing.
@@ -730,7 +759,7 @@ on run argv
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
 			
 			--------BEGIN JAMF PROFILE ROUTINES--------
-
+			
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
 			
@@ -789,7 +818,7 @@ on run argv
 			
 			--Disable the auto-check for VMs, which separates profiles from agent enrollments.
 			do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
-
+			
 			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
 			--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
 			--Values can be set below inline (default is setting "Vendor" to "AWS" in Purchasing tab of Jamf device records.)
