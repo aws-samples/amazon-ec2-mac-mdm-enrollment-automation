@@ -46,13 +46,13 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
 5. In **Terminal**, type the following command: 
     1. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup`
-    2. Note: if you aren't using DEPNotify (see below for why), add the `--no-screen` flag to deactivate.
-           - e.g. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup --no-screen`
+    2. Note: if you would like to use DEPNotify (see below for why), add the `--with-screen` flag to activate.
+           - e.g. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen`
     - *In the event the Jamf server credentials are incorrect, an error will appear halting this process. Correct these credentials to continue.*
-6. **Follow the prompts** to enable System Events, Accessibility, and App Management (if using DEPNotify permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `testFlag` is not set to `1`.
+6. **Follow the prompts** to enable System Events, Accessibility, and App Management (if using DEPNotify) permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `testFlag` is not set to `1`.
     1. After a short delay, enroll-ec2-mac will try to access all the permissions that it will need to during actual enrollment, but not performing all of the enrollment actions.
         - During this process, it is normal for the screen to flash a few times.
-        - *Optional: if `useDEPNotify` is set to `false`, or the `--no-screen` flag is used, prompts for **App Management** will not appear and the screen will not flash. DEPNotify is used to keep users from interfering in the enrollment process, but is optional if automatic login is set on Apple silicon instances, since enrollment can transparently occur before a user logs in.*
+        - *Optional: if `useDEPNotify` is set to `true`, or the `--with-screen` flag is used, prompts for **App Management** will appear and the screen will flash. DEPNotify is used to keep users from interfering in the enrollment process, but is optional if automatic login is set, since enrollment can transparently occur before a user logs in.*
     2. In the event of an error, click **Re-run** and respond to the prompts again.
     3. If a final prompt or error does not appear after some time (over 2 minutes), run the following command to reload the LaunchAgent and re-run the task:
         - `launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist`
@@ -95,8 +95,8 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 - `invitationID` is a value for the Jamf invitation ID (numeric string). By default this is read/generated via Jamf API, but can be manually set.
 - - *Note: If an invitation ID is set, the Jamf API **will not be called.***
 - `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store). (default `SecretsManager`)
-- `useDEPNotify` deactivates (if set to false) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `false` when the `--no-screen` flag is used. (default `true`)
-- `autoLogin` enables/disables automatic login of the stored user. This has not been reliably automated in some versions of macOS, and is still recommended as a manual step taken during setup regardless of this setting. (default `true`)
+- `useDEPNotify` activates (if set to `true`) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `true` when the `--with-screen` flag is used, and explicitly `false` with the `--no-screen` flag. (default `false`, *Note: changed from `true` in earlier versions*)
+- `autoLogin` enables/disables automatic login of the stored user. Note: it is recommended to use a User Data script during setup to automate this setting, as some versions of macOS require additional commands. (default `true`)
 - `invPreload` enables inventory preload via Jamf API. Default setting in code is to set **Vendor** to **AWS** when enabled. (default `false`)
 ---
 
