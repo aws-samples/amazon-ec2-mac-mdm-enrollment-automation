@@ -372,11 +372,8 @@ on run argv
 		set argv to "--launchagent --run-agent"
 	end if
 	
-	
-	
 	set appName to "enroll-ec2-mac"
 	set jamfSecretID to my MMSecretVar()
-	
 	
 	--By default, enroll-ec2-mac uses AWS Secrets manager to retrieve credentials for runtime.
 	
@@ -410,7 +407,13 @@ on run argv
 		set adminPass to (do shell script "cat /Users/Shared/.stageHandCredential")
 		set stageHand to "1"
 	on error
-		set stageHand to "0"
+	--If using a different administrator account to the one logging in, touch the file indicated below.
+		try
+			set adminSet to (do shell script "cat /Users/Shared/._enroll-ec2-mac/.userSetupComplete")
+			set stageHand to "1"
+		on error
+			set stageHand to "0"
+		end try
 	end try
 	
 	--Path to the enroll-ec2-mac script.
@@ -734,13 +737,13 @@ on run argv
 				
 			end if
 			
-			--Flagged so that a cleanup doesn't happen if we're just testing.
-			set testFlag to 1
-			
+			--Flag so that a cleanup doesn't happen if we're just testing.
+			--When ready for production with cleanup, use "defaults read com.amazon.dsx.ec2.enrollment.automation prodFlag 1" to set.
 			try
-				get testFlag
+				set prodFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation prodFlag")
+				get prodFlag
 			on error
-				set testFlag to 0
+				set prodFlag to "0"
 			end try
 			
 			--Set a management user here. A randomized UUID is chosen for a password.
@@ -1063,7 +1066,7 @@ on run argv
 			do shell script "launchctl enable system/com.apple.screensharing" user name localAdmin password adminPass with administrator privileges
 			do shell script "launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist" user name localAdmin password adminPass with administrator privileges
 			
-			if testFlag is not 1 then
+			if prodFlag is "1" then
 				--Cleanup routines. The tccutil full resets are total due to "osascript" not being a valid bundle ID that tccutil understands. Could be overcome with a compiled AppleScript bundle, though…
 				my visiLog("Command: DeterminateManual", "4", localAdmin, adminPass)
 				my visiLog("Command: DeterminateManualStep", "4", localAdmin, adminPass)
