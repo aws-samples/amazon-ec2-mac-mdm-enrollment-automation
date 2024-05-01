@@ -33,44 +33,44 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 
 ### AMI Setup
 
-1. **Start** an EC2 Mac instance on a mac2 host from the Amazon-vended macOS AMI. 
-    1. **Attach** the above **㊙️🪪 IAM Instance Profile** to the instance.
+1. [**Start** an EC2 Mac instance on a Mac dedicated host from an Amazon-vended macOS AMI.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-mac-instances.html#mac-instance-launch)
+    1. [**Attach** the above **㊙️🪪 IAM Instance Profile**](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) to the instance.
 2. **Connect** via SSH, **enable** Screen Sharing/VNC, and **set** the admin password to match the one saved in the Secret.
     1. In a single line:` sudo /usr/bin/dscl . -passwd /Users/ec2-user 'l0c4l3x4mplep455w0rd' ; sudo launchctl enable system/com.apple.screensharing ; sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist`
 3. **Connect** to the Mac **GUI** (via VNC or Screen Sharing) and **log in** with the above password.
 3. Enable **Automatically log in as** for the current user in **System Settings -> Users & Groups.**
-4. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
+5. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
     1. Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
         - `defaults write /Library/Preferences/com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"`, replacing what's in quotes with the ID or ARN of your secret.
         - *This secret is the one your  **㊙️🪪 IAM Instance Profile** can access.*
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
-5. In **Terminal**, type the following command: 
+6. In **Terminal**, type the following command: 
     1. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup`
     2. Note: if you would like to use DEPNotify (see below for why), add the `--with-screen` flag to activate.
            - e.g. `osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen`
     - *In the event the Jamf server credentials are incorrect, an error will appear halting this process. Correct these credentials to continue.*
-6. **Follow the prompts** to enable System Events, Accessibility, and App Management (if using DEPNotify) permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `testFlag` is not set to `1`.
+7. **Follow the prompts** to enable System Events, Accessibility, and App Management (if using DEPNotify) permissions as needed. These will be enabled for the `osascript` process and may be reverted programmatically, included in the cleanup routines if `prodFlag` is set to `1`.
     1. After a short delay, enroll-ec2-mac will try to access all the permissions that it will need to during actual enrollment, but not performing all of the enrollment actions.
         - During this process, it is normal for the screen to flash a few times.
         - *Optional: if `useDEPNotify` is set to `true`, or the `--with-screen` flag is used, prompts for **App Management** will appear and the screen will flash. DEPNotify is used to keep users from interfering in the enrollment process, but is optional if automatic login is set, since enrollment can transparently occur before a user logs in.*
     2. In the event of an error, click **Re-run** and respond to the prompts again.
     3. If a final prompt or error does not appear after some time (over 2 minutes), run the following command to reload the LaunchAgent and re-run the task:
         - `launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist`
-7. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
+8. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
         - **Make sure to click OK before creating your image.** If not, enroll-ec2-mac will re-attempt setup (and not enrollment) on subsequent runs until it's clicked.
-9. Optional: **disable screen sharing** via the active SSH session.
+9. Optional: **disable screen sharing** via the command line.
     1. `sudo launchctl disable system/com.apple.screensharing ; sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.screensharing.plist`
 10. After clicking OK, [**Create an image**](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html) from the running instance.
     1. Follow the linked instructions to **Create a Linux AMI from an instance** (instructions also cover macOS instances).
     2. Workflow was tested with **“No reboot”** enabled.
         - *Note: if the instance is rebooted or logged out after clicking OK,* **enrollment will occur.**
-    3. Ensure “Delete on termination” is **unchecked** to keep the AMI after terminating the template instance.
+    3. “Delete on termination” is recommended to be **unchecked** to keep the AMI after [terminating the template instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/preserving-volumes-on-termination.html).
 11. When AMI moves from **Pending** to **Available**, launch a new instance with the AMI. 
-    1. This process may take an hour or more.
-    2. Ensure the newly launched instance has the appropriate **㊙️🪪 IAM instance profile** to retrieve the credentials.
-12. When new instance is launched, it will enroll **automatically**, and without any further intervention. 
-    1. Code in enroll-ec2-mac will auto-enable Screen Sharing when enrollment is complete.
-    2. Cleanup code is available to revoke permissions used for `osascript`.
+    1. This process may take an hour or more depending on storage class and data volume.
+12. When new instance is launched using this AMI, it will enroll **automatically**, and without any further intervention. 
+    1. Cleanup (`prodFlag`) is available to revoke permissions and remove files.
+    2. Code in enroll-ec2-mac can auto-enable Screen Sharing when enrollment is complete.
+    3. Ensure that any newly launched instance has an appropriate **㊙️🪪 IAM instance profile** that can retrieve the credentials.
 
 
 
@@ -98,6 +98,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 - `useDEPNotify` activates (if set to `true`) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `true` when the `--with-screen` flag is used, and explicitly `false` with the `--no-screen` flag. (default `false`, *Note: changed from `true` in earlier versions*)
 - `autoLogin` enables/disables automatic login of the stored user. Note: it is recommended to use a User Data script during setup to automate this setting, as some versions of macOS require additional commands. (default `true`)
 - `invPreload` enables inventory preload via Jamf API. Default setting in code is to set **Vendor** to **AWS** when enabled. (default `false`)
+- `prodFlag` enables cleanup routines to reset the TCC databases, delete the script, and remove associated files. Some optional commands are included and commented out, including to remove the active instance profile. Set to `1` to enable. (default `0`, *Note: changed from `testFlag` in earlier versions, which was only available to set inline.*)
 ---
 
 ## Manual Configuration for AWS Secrets Manager & IAM
