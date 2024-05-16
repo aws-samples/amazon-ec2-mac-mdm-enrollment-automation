@@ -973,9 +973,14 @@ on run argv
 					my visiLog("Status", "Profile authorized, awaiting enrollment confirmation…", localAdmin, adminPass)
 					repeat
 						try
-							set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+							set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
 						on error
-							set managedValidationText to ""
+							try
+								set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+								
+							on error
+								set managedValidationText to ""
+							end try
 						end try
 						if managedValidationText contains "managed" then
 							do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
