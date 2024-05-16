@@ -9,10 +9,10 @@
 --To create the LaunchAgent and start the required permissions requests, run from Terminal as:
 --osascript /Users/Shared/enroll-ec2-mac.scpt --setup
 
---To do the above and skip DEPNotify, run:
---osascript /Users/Shared/enroll-ec2-mac.scpt --setup --no-screen
+--To do the above and use DEPNotify, run:
+--osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen
 
---Important: either set your secret name in the MMSecretVar subroutine below, or via the following command:
+--Important: either set your secret name in the MMSecretVar subroutine below, or via the following CLI command:
 --defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"
 
 on MMSecretVar()
@@ -345,6 +345,28 @@ on clickCheck(prependPath)
 	return isAppInstalled
 end clickCheck
 
+on jamfSignatureVerify(adminIn, passIn)
+	try
+		--This routine checks if renewing (removing/re-downloading) the current profile is necessary.
+		set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name adminIn password passIn with administrator privileges)
+		
+		--If policy is currently running (and no error is recorded), check again when it's likely to be done.
+		if checkProfileValidity contains "have completed" then
+			log "Waiting for Jamf agent to finish policy run…"
+			delay 300
+			set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name adminIn password passIn with administrator privileges)
+		end if
+	on error
+		--Any error to the command, this workflow considers it not needing a Jamf profile removed.
+		set checkProfileValidity to null
+	end try
+	if checkProfileValidity contains "Device Signature Error" then
+		return "No"
+	else
+		return "Yes"
+	end if
+end jamfSignatureVerify
+
 on run argv
 	
 	--This block is here primarily for testing: if you just run enroll-ec2-mac, it will attempt to enroll (running without arguments).
@@ -407,7 +429,7 @@ on run argv
 		set adminPass to (do shell script "cat /Users/Shared/.stageHandCredential")
 		set stageHand to "1"
 	on error
-	--If using a different administrator account to the one logging in, touch the file indicated below.
+		--If using a different administrator account to the one logging in, touch the file indicated below.
 		try
 			set adminSet to (do shell script "cat /Users/Shared/._enroll-ec2-mac/.userSetupComplete")
 			set stageHand to "1"
@@ -675,32 +697,27 @@ on run argv
 			set enrollmentCheckCLI to null
 		end try
 		
-		--Deactivating secondary check for enrollment to test.
-		set secondaryCheck to false
-		
 		if enrollmentCheckCLI does not contain "Yes" then
-			if secondaryCheck is true then
-				do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
-				delay 2
-				--check for enrollment message
-				tell application "System Events" to tell process settingsApp
-					try
-						set managedStatus to (value of static text 1 of window 1)
-					on error
-						set managedStatus to "No"
-					end try
-					if managedStatus contains "Managed" then
-						set enrollmentCheckAll to "Yes"
-					else
-						set enrollmentCheckAll to "No"
-					end if
-				end tell
-			else
-				set managedStatus to "No"
-				set enrollmentCheckAll to "No"
-			end if
+			do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
+			delay 2
+			--check for enrollment message
+			tell application "System Events" to tell process settingsApp
+				try
+					set managedStatus to (value of static text 1 of window 1)
+				on error
+					set managedStatus to "No"
+				end try
+				if managedStatus contains "Managed" then
+					set enrollmentCheckAll to my jamfSignatureVerify(localAdmin, adminPass)
+				else
+					set managedStatus to "No"
+					set enrollmentCheckAll to "No"
+				end if
+			end tell
 		else
-			set enrollmentCheckAll to "Yes"
+			--Secondary check for enrollment (uses Jamf binary to test communications).
+			set enrollmentCheckAll to my jamfSignatureVerify(localAdmin, adminPass)
+			log enrollmentCheckAll
 		end if
 		
 		
@@ -766,23 +783,10 @@ on run argv
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
 			
-			try
-				--This routine checks if renewing (removing/re-downloading) the current profile if necessary.
-				set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
-				
-				--If policy is currently running (and no error is recorded), check again when it's likely to be done.
-				if checkProfileValidity contains "have completed" then
-					log "Waiting for Jamf agent to finish policy run…"
-					delay 300
-					set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
-				end if
-			on error
-				--Any error to the command, this workflow considers it not needing a profile removed.
-				set checkProfileValidity to "Device Signature Error"
-			end try
+			set profileSignatureCheck to jamfSignatureVerify(localAdmin, adminPass)
 			
 			--If currently enrolled, remove current profile.
-			if checkProfileValidity contains "Device Signature Error" then
+			if profileSignatureCheck contains "No" then
 				my visiLog("Status", ("Removing current, out-of-contact profile…"), localAdmin, adminPass)
 				do shell script "/usr/local/bin/jamf removeMdmProfile" user name localAdmin password adminPass with administrator privileges
 				--This delay is more of a safeguard, may be adjusted/removed depending on contextual operations (and incidental delays).
@@ -969,15 +973,29 @@ on run argv
 					my visiLog("Status", "Profile authorized, awaiting enrollment confirmation…", localAdmin, adminPass)
 					repeat
 						try
-							set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+							set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
 						on error
-							set managedValidationText to ""
+							try
+								set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+								
+							on error
+								set managedValidationText to ""
+							end try
 						end try
 						if managedValidationText contains "managed" then
 							do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
 							exit repeat
 						else
 							delay 0.5
+						end if
+						try
+							set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+						on error
+							set enrollmentCLI to null
+						end try
+						if enrollmentCLI contains "Yes" then
+							do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
+							exit repeat
 						end if
 					end repeat
 				end tell
@@ -1042,24 +1060,18 @@ on run argv
 						else
 							delay 0.5
 						end if
+						try
+							set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+						on error
+							set enrollmentCLI to null
+						end try
+						if enrollmentCLI contains "Yes" then
+							exit repeat
+						end if
 					end repeat
 				end tell
 			end if
 			
-			--Secondary system-level check for enrollment (returns blank if unenrolled)
-			delay 0.5
-			try
-				set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
-			on error
-				set enrollmentCLI to null
-			end try
-			
-			if enrollmentCLI is null then
-				--secondary option for failover if enrollment is unsuccessful.
-				
-			else
-				
-			end if
 			
 			
 			--Enable screen sharing for user to connect. May be embedded, but good for "access enabled after enrollment." This flow only works if the AMI is prepared with auto-login.
@@ -1122,7 +1134,7 @@ on run argv
 			delay 10
 			
 		else
-			delay 30
+			delay 1
 		end if
 	end if
 end run
