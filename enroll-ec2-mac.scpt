@@ -345,16 +345,16 @@ on clickCheck(prependPath)
 	return isAppInstalled
 end clickCheck
 
-on jamfSignatureVerify()
+on jamfSignatureVerify(adminIn, passIn)
 	try
 		--This routine checks if renewing (removing/re-downloading) the current profile is necessary.
-		set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
+		set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name adminIn password passIn with administrator privileges)
 		
 		--If policy is currently running (and no error is recorded), check again when it's likely to be done.
 		if checkProfileValidity contains "have completed" then
 			log "Waiting for Jamf agent to finish policy run…"
 			delay 300
-			set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
+			set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name adminIn password passIn with administrator privileges)
 		end if
 	on error
 		--Any error to the command, this workflow considers it not needing a Jamf profile removed.
@@ -429,7 +429,7 @@ on run argv
 		set adminPass to (do shell script "cat /Users/Shared/.stageHandCredential")
 		set stageHand to "1"
 	on error
-	--If using a different administrator account to the one logging in, touch the file indicated below.
+		--If using a different administrator account to the one logging in, touch the file indicated below.
 		try
 			set adminSet to (do shell script "cat /Users/Shared/._enroll-ec2-mac/.userSetupComplete")
 			set stageHand to "1"
@@ -695,7 +695,7 @@ on run argv
 			set enrollmentCheckCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' " user name localAdmin password adminPass with administrator privileges)
 		on error
 			set enrollmentCheckCLI to null
-		end try		
+		end try
 		
 		if enrollmentCheckCLI does not contain "Yes" then
 			do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
@@ -708,16 +708,16 @@ on run argv
 					set managedStatus to "No"
 				end try
 				if managedStatus contains "Managed" then
-					set enrollmentCheckAll to my jamfSignatureVerify()
+					set enrollmentCheckAll to my jamfSignatureVerify(localAdmin, adminPass)
 				else
-				set managedStatus to "No"
-				set enrollmentCheckAll to "No"
+					set managedStatus to "No"
+					set enrollmentCheckAll to "No"
 				end if
 			end tell
 		else
 			--Secondary check for enrollment (uses Jamf binary to test communications).
-				set enrollmentCheckAll to my jamfSignatureVerify()
-
+			set enrollmentCheckAll to my jamfSignatureVerify(localAdmin, adminPass)
+			log enrollmentCheckAll
 		end if
 		
 		
@@ -782,11 +782,11 @@ on run argv
 			
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
-
-			set profileSignatureCheck to my jamfSignatureVerify()
+			
+			set profileSignatureCheck to jamfSignatureVerify(localAdmin, adminPass)
 			
 			--If currently enrolled, remove current profile.
-			if profileSignatureCheck contains "Yes" then
+			if profileSignatureCheck contains "No" then
 				my visiLog("Status", ("Removing current, out-of-contact profile…"), localAdmin, adminPass)
 				do shell script "/usr/local/bin/jamf removeMdmProfile" user name localAdmin password adminPass with administrator privileges
 				--This delay is more of a safeguard, may be adjusted/removed depending on contextual operations (and incidental delays).
@@ -983,6 +983,15 @@ on run argv
 						else
 							delay 0.5
 						end if
+						try
+							set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+						on error
+							set enrollmentCLI to null
+						end try
+						if enrollmentCLI contains "Yes" then
+							do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
+							exit repeat
+						end if
 					end repeat
 				end tell
 				
@@ -1046,24 +1055,18 @@ on run argv
 						else
 							delay 0.5
 						end if
+						try
+							set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+						on error
+							set enrollmentCLI to null
+						end try
+						if enrollmentCLI contains "Yes" then
+							exit repeat
+						end if
 					end repeat
 				end tell
 			end if
 			
-			--Secondary system-level check for enrollment (returns blank if unenrolled)
-			delay 0.5
-			try
-				set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
-			on error
-				set enrollmentCLI to null
-			end try
-			
-			if enrollmentCLI is null then
-				--secondary option for failover if enrollment is unsuccessful.
-				
-			else
-				
-			end if
 			
 			
 			--Enable screen sharing for user to connect. May be embedded, but good for "access enabled after enrollment." This flow only works if the AMI is prepared with auto-login.
@@ -1126,7 +1129,7 @@ on run argv
 			delay 10
 			
 		else
-			delay 30
+			delay 1
 		end if
 	end if
 end run
