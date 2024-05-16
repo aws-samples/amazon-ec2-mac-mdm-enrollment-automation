@@ -9,10 +9,10 @@
 --To create the LaunchAgent and start the required permissions requests, run from Terminal as:
 --osascript /Users/Shared/enroll-ec2-mac.scpt --setup
 
---To do the above and skip DEPNotify, run:
---osascript /Users/Shared/enroll-ec2-mac.scpt --setup --no-screen
+--To do the above and use DEPNotify, run:
+--osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen
 
---Important: either set your secret name in the MMSecretVar subroutine below, or via the following command:
+--Important: either set your secret name in the MMSecretVar subroutine below, or via the following CLI command:
 --defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"
 
 on MMSecretVar()
@@ -675,7 +675,8 @@ on run argv
 			set enrollmentCheckCLI to null
 		end try
 		
-		--Deactivating secondary check for enrollment to test.
+		--Secondary check for enrollment to test (uses Jamf binary to test communications).
+		
 		set secondaryCheck to false
 		
 		if enrollmentCheckCLI does not contain "Yes" then
@@ -700,7 +701,25 @@ on run argv
 				set enrollmentCheckAll to "No"
 			end if
 		else
-			set enrollmentCheckAll to "Yes"
+			try
+				--This routine checks if renewing (removing/re-downloading) the current profile is necessary.
+				set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
+				
+				--If policy is currently running (and no error is recorded), check again when it's likely to be done.
+				if checkProfileValidity contains "have completed" then
+					log "Waiting for Jamf agent to finish policy run…"
+					delay 300
+					set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
+				end if
+			on error
+				--Any error to the command, this workflow considers it not needing a Jamf profile removed.
+				set checkProfileValidity to null
+			end try
+			if checkProfileValidity contains "Device Signature Error" then
+				set enrollmentCheckAll to "No"
+			else
+				set enrollmentCheckAll to "Yes"
+			end if
 		end if
 		
 		
@@ -765,21 +784,6 @@ on run argv
 			
 			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
 			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
-			
-			try
-				--This routine checks if renewing (removing/re-downloading) the current profile if necessary.
-				set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
-				
-				--If policy is currently running (and no error is recorded), check again when it's likely to be done.
-				if checkProfileValidity contains "have completed" then
-					log "Waiting for Jamf agent to finish policy run…"
-					delay 300
-					set checkProfileValidity to (do shell script "/usr/local/bin/jamf policy > /tmp/jamfErrorCheck.txt ; cat /tmp/jamfErrorCheck.txt" user name localAdmin password adminPass with administrator privileges)
-				end if
-			on error
-				--Any error to the command, this workflow considers it not needing a profile removed.
-				set checkProfileValidity to "Device Signature Error"
-			end try
 			
 			--If currently enrolled, remove current profile.
 			if checkProfileValidity contains "Device Signature Error" then
