@@ -20,9 +20,10 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
-        * This is an API client or user account in the **Jamf** console, and its role only requires **Create** permission for **Computer Invitations**.
-        * If using Jamf API Client Credentials, fill the `jamfEnrollmentUser` field with the **Client ID** and `jamfEnrollmentPassword` with the **Client Secret**.
-        * Additional permissions for Jamf account are required for other API features, such as preloading information and removing device records.
+        * This holds a Jamf API `client_id` and `client_secret` created in the **Jamf** console, and its role only requires **Create** permission for **Computer Enrollment Invitations**.
+        * Jamf API Client Credentials are required. The `jamfEnrollmentUser` field holds the **Client ID** and `jamfEnrollmentPassword` holds the **Client Secret**.
+        * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients**.*
+        * Additional permissions for Jamf API are required for other features, such as preloading information and removing device records.
     4. `localAdmin` `("ec2-user")`
         1. The default is `ec2-user` unless a change is made outside of these instructions. Must be an administrator account.
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
@@ -40,7 +41,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 3. **Connect** to the Mac **GUI** (via VNC or Screen Sharing) and **log in** with the above password.
 3. Enable **Automatically log in as** for the current user in **System Settings -> Users & Groups.**
 5. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
-    1. Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
+    1. IMPORTANT: Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
         - `defaults write /Library/Preferences/com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"`, replacing what's in quotes with the ID or ARN of your secret.
         - *This secret is the one your  **㊙️🪪 IAM Instance Profile** can access.*
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
@@ -68,9 +69,9 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 11. When AMI moves from **Pending** to **Available**, launch a new instance with the AMI. 
     1. This process may take an hour or more depending on storage class and data volume.
 12. When new instance is launched using this AMI, it will enroll **automatically**, and without any further intervention. 
-    1. Cleanup (`prodFlag`) is available to revoke permissions and remove files.
-    2. Code in enroll-ec2-mac can auto-enable Screen Sharing when enrollment is complete.
-    3. Ensure that any newly launched instance has an appropriate **㊙️🪪 IAM instance profile** that can retrieve the credentials.
+    1. IMPORTANT: Ensure that any new instance launched from this AMI has an appropriate **㊙️🪪 IAM instance profile** that can retrieve the credentials.
+    2. Cleanup (`prodFlag`) is available to revoke permissions and remove files.
+    3. Code in `enroll-ec2-mac` can auto-enable Screen Sharing when enrollment is complete.
 
 
 
@@ -95,7 +96,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 - `invitationID` is a value for the Jamf invitation ID (numeric string). By default this is read/generated via Jamf API, but can be manually set.
 - - *Note: If an invitation ID is set, the Jamf API **will not be called.***
 - `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store). (default `SecretsManager`)
-- `useDEPNotify` activates (if set to `true`) the DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `true` when the `--with-screen` flag is used, and explicitly `false` with the `--no-screen` flag. (default `false`, *Note: changed from `true` in earlier versions*)
+- `useDEPNotify` activates (if set to `true`) a DEPNotify UI that enroll-ec2-mac uses to shield the display from a user during enrollment. This is set to `true` when the `--with-screen` flag is used, and explicitly `false` with the `--no-screen` flag. (default `false`, *Note: changed from `true` in earlier versions*)
 - `autoLogin` enables/disables automatic login of the stored user. Note: it is recommended to use a User Data script during setup to automate this setting, as some versions of macOS require additional commands. (default `true`)
 - `invPreload` enables inventory preload via Jamf API. Default setting in code is to set **Vendor** to **AWS** when enabled. (default `false`)
 - `prodFlag` enables cleanup routines to reset the TCC databases, delete the script, and remove associated files. Some optional commands are included and commented out, including to remove the active instance profile. Set to `1` to enable. (default `0`, *Note: changed from `testFlag` in earlier versions, which was only available to set inline.*)
@@ -105,7 +106,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 
 enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the Jamf URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance needs an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets, as well. 
 
-The Jamf API client or user account for enroll-ec2-mac *only* requires the **Create** permission for **Computer Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
+The Jamf API permissions for enroll-ec2-mac *only* requires the client have **Create** permission for **Computer Enrollment Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
 
 ---
 
