@@ -777,72 +777,78 @@ on run argv
 				delay 0.5
 			end if
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
-			
-			--------BEGIN JAMF PROFILE ROUTINES--------
-			
-			--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
-			set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
-			
-			set profileSignatureCheck to jamfSignatureVerify(localAdmin, adminPass)
-			
-			--If currently enrolled, remove current profile.
-			if profileSignatureCheck contains "No" then
-				my visiLog("Status", ("Removing current, out-of-contact profile…"), localAdmin, adminPass)
-				do shell script "/usr/local/bin/jamf removeMdmProfile" user name localAdmin password adminPass with administrator privileges
-				--This delay is more of a safeguard, may be adjusted/removed depending on contextual operations (and incidental delays).
-				delay 2
-			end if
-			
-			
-			set jamfServerAddress to (my tripleDouble(jamfServerDomain))
-			
-			--Initial check for an invitation code set inline or via plist.
-			set invitationID to my getInvitationID()
-			
-			--If no invitation ID is found, call the Jamf API for a new one.
-			if invitationID is false then
-				try
-					set currentAuthToken to (authCallToken(jamfServerAddress, SDKUser, SDKPassword))
-				on error
-					log "Error: Jamf credentials do not appear correct. Error below:" & return
+			if SDKUser is "kandji" then
+				--------BEGIN KANDJI PROFILE ROUTINES--------
+				--Still need to add an out-of-contact profile check/remedy.
+				set kandjiServerAddress to (my tripleDouble(jamfServerDomain))
+				my kandjiEnrollmentProfile(kandjiServerAddress, SDKPassword)
+				--------END KANDJI PROFILE ROUTINES--------
+			else
+				--------BEGIN JAMF PROFILE ROUTINES--------
+				
+				--Expiration date for the invitation. Set at 2 days in the command below, but may be set to anything desired.
+				set expirationDate to (do shell script "date -v+2d +\"%Y-%m-%d %H:%M:%S\"")
+				
+				set profileSignatureCheck to jamfSignatureVerify(localAdmin, adminPass)
+				
+				--If currently enrolled, remove current profile.
+				if profileSignatureCheck contains "No" then
+					my visiLog("Status", ("Removing current, out-of-contact profile…"), localAdmin, adminPass)
+					do shell script "/usr/local/bin/jamf removeMdmProfile" user name localAdmin password adminPass with administrator privileges
+					--This delay is more of a safeguard, may be adjusted/removed depending on contextual operations (and incidental delays).
+					delay 2
+				end if
+				
+				
+				set jamfServerAddress to (my tripleDouble(jamfServerDomain))
+				
+				--Initial check for an invitation code set inline or via plist.
+				set invitationID to my getInvitationID()
+				
+				--If no invitation ID is found, call the Jamf API for a new one.
+				if invitationID is false then
 					try
-						log currentAuthToken
+						set currentAuthToken to (authCallToken(jamfServerAddress, SDKUser, SDKPassword))
+					on error
+						log "Error: Jamf credentials do not appear correct. Error below:" & return
+						try
+							log currentAuthToken
+						end try
+						return
 					end try
-					return
+					set invitationXML to "<computer_invitation><invitation_type>DEFAULT</invitation_type><expiration_date>" & expirationDate & "</expiration_date><ssh_username>" & managementUser & "</ssh_username><ssh_password>" & managementPass & "</ssh_password><multiple_users_allowed>false</multiple_users_allowed><create_account_if_does_not_exist>true</create_account_if_does_not_exist><hide_account>true</hide_account><lock_down_ssh></lock_down_ssh><enrolled_into_site><id></id><name></name></enrolled_into_site><keep_existing_site_membership></keep_existing_site_membership><site><id></id><name></name></site></computer_invitation>"
+					
+					set targetResponseCode to (do shell script "curl -sH \"Accept: application/xml\" -H \"Content-Type: application/xml\" -H \"Authorization: Bearer " & currentAuthToken & "\" " & jamfServerAddress & "JSSResource/computerinvitations/id/id0 -X POST -d '" & invitationXML & "'")
+					
+					set AppleScript's text item delimiters to "<invitation>"
+					set invitationIDTransitory to text item 2 of targetResponseCode
+					set AppleScript's text item delimiters to "</"
+					set invitationID to text item 1 of invitationIDTransitory
+					set AppleScript's text item delimiters to ""
+				end if
+				
+				do shell script "echo " & quoted form of (my jamfEnrollmentProfile(invitationID, jamfServerAddress)) & " > /tmp/enrollmentProfile.mobileconfig"
+				
+				--Disable the auto-check for VMs, which separates profiles from agent enrollments.
+				do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
+				
+				--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
+				--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
+				--Values can be set below inline (default is setting "Vendor" to "AWS" in Purchasing tab of Jamf device records.)
+				try
+					set invPreloadFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invPreload")
+					get invPreloadFlag
+				on error
+					set invPreloadFlag to "0"
 				end try
-				set invitationXML to "<computer_invitation><invitation_type>DEFAULT</invitation_type><expiration_date>" & expirationDate & "</expiration_date><ssh_username>" & managementUser & "</ssh_username><ssh_password>" & managementPass & "</ssh_password><multiple_users_allowed>false</multiple_users_allowed><create_account_if_does_not_exist>true</create_account_if_does_not_exist><hide_account>true</hide_account><lock_down_ssh></lock_down_ssh><enrolled_into_site><id></id><name></name></enrolled_into_site><keep_existing_site_membership></keep_existing_site_membership><site><id></id><name></name></site></computer_invitation>"
-				
-				set targetResponseCode to (do shell script "curl -sH \"Accept: application/xml\" -H \"Content-Type: application/xml\" -H \"Authorization: Bearer " & currentAuthToken & "\" " & jamfServerAddress & "JSSResource/computerinvitations/id/id0 -X POST -d '" & invitationXML & "'")
-				
-				set AppleScript's text item delimiters to "<invitation>"
-				set invitationIDTransitory to text item 2 of targetResponseCode
-				set AppleScript's text item delimiters to "</"
-				set invitationID to text item 1 of invitationIDTransitory
-				set AppleScript's text item delimiters to ""
+				if invPreloadFlag is not "0" then
+					set preloadFlag to "vendor"
+					set preloadValue to "AWS"
+					set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
+					my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
+				end if
+				--------END JAMF PROFILE ROUTINES--------
 			end if
-			
-			do shell script "echo " & quoted form of (my jamfEnrollmentProfile(invitationID, jamfServerAddress)) & " > /tmp/enrollmentProfile.mobileconfig"
-			
-			--Disable the auto-check for VMs, which separates profiles from agent enrollments.
-			do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
-			
-			--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
-			--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
-			--Values can be set below inline (default is setting "Vendor" to "AWS" in Purchasing tab of Jamf device records.)
-			try
-				set invPreloadFlag to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invPreload")
-				get invPreloadFlag
-			on error
-				set invPreloadFlag to "0"
-			end try
-			if invPreloadFlag is not "0" then
-				set preloadFlag to "vendor"
-				set preloadValue to "AWS"
-				set enrollingSerial to (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
-				my jamfInventoryPreload(jamfServerAddress, currentAuthToken, enrollingSerial, preloadFlag, preloadValue)
-			end if
-			--------END JAMF PROFILE ROUTINES--------
-			
 			--Opens the profile, bringing the UI notification up.
 			do shell script "open /tmp/enrollmentProfile.mobileconfig"
 			delay 0.5
