@@ -417,7 +417,8 @@ on run argv
 	set localAdmin to my retrieveSecret(currentRegion, jamfSecretID, "localAdmin")
 	set adminPass to my retrieveSecret(currentRegion, jamfSecretID, "localAdminPassword")
 	
-	
+	set mdmServerDomain to jamfServerDomain
+
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
 	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
@@ -784,10 +785,16 @@ on run argv
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
 			if SDKUser is "kandji" then
 				--------BEGIN KANDJI PROFILE ROUTINES--------
-				--Still need to add an out-of-contact profile check/remedy.
-				set kandjiServerAddress to (my tripleDouble(jamfServerDomain))
+				--Note: currently there is not yet an out-of-contact profile check/remedy for Kandji.
+				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
 				my kandjiEnrollmentProfile(kandjiServerAddress, SDKPassword)
 				--------END KANDJI PROFILE ROUTINES--------
+			else if SDKUser is "addigy" then
+				--------BEGIN ADDIGY PROFILE ROUTINES--------
+				--Note: currently there is not yet an out-of-contact profile check/remedy for Addigy.
+				set addigyAddress to (my tripleDouble(mdmServerDomain))
+				do shell script "curl " & addigyAddress & " -o /tmp/enroll.mobileconfig"
+				--------END ADDIGY PROFILE ROUTINES--------
 			else
 				--------BEGIN JAMF PROFILE ROUTINES--------
 				
