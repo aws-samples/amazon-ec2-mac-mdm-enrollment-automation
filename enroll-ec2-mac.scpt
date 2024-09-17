@@ -202,6 +202,8 @@ on securityCheckVentura()
 			if securityOverlay contains "Profiles" then
 				delay 0.1
 				exit repeat
+			else if securityOverlay contains "Device Management" then
+				exit repeat
 			else
 				delay 0.1
 			end if
@@ -474,6 +476,9 @@ on run argv
 	else if macOSVersion starts with "14" then
 		set settingsApp to "System Settings"
 		set macOSMajor to 14
+	else if macOSVersion starts with "15" then
+		set settingsApp to "System Settings"
+		set macOSMajor to 15
 	else
 		set settingsApp to "System Preferences"
 		set macOSMajor to 12
@@ -882,10 +887,32 @@ on run argv
 								click button (i - 1) of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Privacy & Security"
 							end try
 							my windowSearch("Profiles", settingsApp)
+							
 							exit repeat
 						end try
 					end repeat
 				end tell
+			else if macOSMajor is 15 then
+				delay 2
+				repeat with sidebarSearch from 2 to 8
+					try
+						tell application "System Events" to tell process "System Settings"
+							if (get value of static text 1 of UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1) contains "Profile" then
+								set sidebarTarget to (UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1)
+								exit repeat
+							end if
+						end tell
+					end try
+				end repeat
+				delay 1
+				tell application "System Events" to tell process "System Settings" to tell sidebarTarget
+					set {xPosition, yPosition} to position
+					set {xSize, ySize} to size
+				end tell
+				delay 0.5
+				try
+					do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+				end try
 			else
 				my windowSearch("Profiles", settingsApp)
 			end if
@@ -913,8 +940,13 @@ on run argv
 					try
 						set profileCell to row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 					on error
-						--Sonoma b1
-						set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Profiles"
+						try
+							--Sonoma b1
+							set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+						on error
+							--Sequoia 15.0
+							set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+						end try
 					end try
 					set {xPosition, yPosition} to position of profileCell
 					set {xSize, ySize} to size of profileCell
