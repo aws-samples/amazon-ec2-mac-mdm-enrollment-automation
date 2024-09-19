@@ -80,6 +80,15 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 * The first spot to check during a script failure is the **㊙️🪪 IAM Instance Profile**: if the script hangs or crashes (any error regarding `“{{ }},{{ }}")`, it may not have access to the secrets it needs, or isn’t parsing them correctly. 
     * To test, in Terminal, manually check the secret (changing `jamfSecret` to the name or ARN of your secret):
         * `aws secretsmanager get-secret-value --secret-id jamfSecret --query SecretString`
+* If using a proxy and only basic profiles appear (i.e. no Self Service or pushed apps, additional profiles assigned are not in System Settings), the proxy needs to be set for the `appstore` process itself. Use the code below to make the change, replacing "proxy.server.address.here" with your proxy server (in quotes):
+    * ```sh
+      PROXY_ADDRESS="proxy.server.address.here"
+      cat <<EOF | sudo tee /var/db/appstore/.curlrc
+      proxy = $PROXY_ADDRESS:3128
+      EOF
+
+      sudo chown -R _appstore:_appstore /var/db/appstore/.curlrc
+      ```
 
 ---
 
