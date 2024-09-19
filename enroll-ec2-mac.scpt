@@ -787,13 +787,13 @@ on run argv
 				--------BEGIN KANDJI PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Kandji.
 				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
-				my kandjiEnrollmentProfile(kandjiServerAddress, SDKPassword)
+				do shell script "curl " & kandjiServerAddress & "app/v1/mdm/enroll/" & SDKPassword & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END KANDJI PROFILE ROUTINES--------
 			else if SDKUser is "addigy" then
 				--------BEGIN ADDIGY PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Addigy.
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
-				do shell script "curl " & addigyAddress & " -o /tmp/enroll.mobileconfig"
+				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
 			else
 				--------BEGIN JAMF PROFILE ROUTINES--------
