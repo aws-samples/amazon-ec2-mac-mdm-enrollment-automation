@@ -82,7 +82,11 @@ on retrieveSecret(secretRegion, secretID, secretQueryKey)
 	if retrievalType contains "SecretsManager" then
 		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws secretsmanager get-secret-value --region " & secretRegion & " --secret-id '" & secretID & "' --query SecretString")
 	else if retrievalType contains "ParameterStore" then
-		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws ssm get-parameter --region " & secretRegion & " --name \"" & secretID & "\" --query 'Parameter.Value'")
+		set secretReturn to (do shell script "PATH=" & pathPossibilities & " ; aws ssm get-parameter --region " & secretRegion & " --name " & secretID & " --with-decryption | grep 'Value'")
+		set AppleScript's text item delimiters to "\"Value\":"
+		set secretReturn to text item 2 of secretReturn
+		set AppleScript's text item delimiters to ""
+		
 	else if retrievalType contains "plist" then
 		try
 			--Change the path below if storing plist in a spot other than the default users' ~/Library.
@@ -257,12 +261,8 @@ end jamfEnrollmentProfile
 
 on jamfInventoryPreload(jamfServerContact, passedAuthToken, deviceSerial, attributeName, attributeValue)
 	--Currently set to provide a single attribute, but can be expanded to any and all Inventory Preload fields.
-	set preloadJSON to ("{\"serialNumber\": \"" & deviceSerial & "\",\"deviceType\": \"Computer\",\"" & attributeName & "\": \"" & attributeValue & "\"}")
+	set preloadJSON to ("{\"serialNumber\": \"" & deviceSerial & "\",\"deviceType\": \"Computer\", \"extensionAttributes\": [    {      \"name\": \"" & attributeName & "\",      \"value\": \"" & attributeValue & "\"    }  ]}")
 	set preloadReturn to (do shell script "curl -X POST " & jamfServerContact & "uapi/v2/inventory-preload/records -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
-	if preloadReturn contains "DUPLICATE_FIELD" then
-		set preloadRecordID to (do shell script "curl -X GET '" & jamfServerContact & "uapi/v2/inventory-preload/records?page-size=100&sort=id%3Adesc' -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "' | grep -B 1 " & deviceSerial & " | awk {'print $3'} | head -n 1 | sed \"s/['/\\\",\\ ]*//g\"")
-		set preloadReturn to (do shell script "curl -X PUT " & jamfServerContact & "uapi/v2/inventory-preload/records/" & preloadRecordID & " -H 'accept: application/json' -H 'Content-Type: application/json' -H 'Authorization: Bearer " & passedAuthToken & "'  -d '" & preloadJSON & "'")
-	end if
 end jamfInventoryPreload
 
 on authCallToken(jamfServer, APIName, APIPass)
