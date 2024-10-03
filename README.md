@@ -10,7 +10,7 @@ enroll-ec2-mac is an AppleScript made to **automatically enroll** [Amazon Web Se
 
 ### enroll-ec2-mac retrieves a **secret** (credentials/passwords) stored in **AWS Secrets Manager**. 
 
-Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [HashiCorp Terraform](https://www.terraform.io/) templates to get these set up. Either of these will automate creating the AWS Secrets Manager secret, Identity and Access Management policy, role, and instance profile needed for enroll-ec2-mac to retrieve credentials. Alternatively, if using AWS Systems Manager Parameter Store instead, templates are also included, and a setting must be changed to match. Manual instructions to set up the secret are also included at the bottom of this page. 
+Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [HashiCorp Terraform](https://www.terraform.io/) templates to get these set up. Either of these will automate creating the AWS Secrets Manager secret, Identity and Access Management policy, role, and instance profile needed for enroll-ec2-mac to retrieve credentials. Alternatively, if using AWS Systems Manager Parameter Store instead, templates are also included, and a setting must be changed to match (see the section Settings below). Manual instructions to set up the secret are also included at the bottom of this page. 
 
 ---
 
@@ -77,9 +77,25 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 
 ### Troubleshooting
 
+* *Important:* if testing a manual enrollment without this script, a preference key must be set for Jamf before enrollment, otherwise MDM profiles will not properly deploy to the cloud instance. This key is set automatically as part of the enroll-ec2-mac script. The command below will set the preference key manually.
+  ```sh
+    sudo defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0
+    ```
 * The first spot to check during a script failure is the **㊙️🪪 IAM Instance Profile**: if the script hangs or crashes (any error regarding `“{{ }},{{ }}")`, it may not have access to the secrets it needs, or isn’t parsing them correctly. 
     * To test, in Terminal, manually check the secret (changing `jamfSecret` to the name or ARN of your secret):
         * `aws secretsmanager get-secret-value --secret-id jamfSecret --query SecretString`
+* If using an HTTP/HTTPS proxy and only basic profiles appear (i.e. no Self Service or pushed apps, additional profiles assigned are not in System Settings), the proxy needs to be set for the `appstore` process itself. Use the code below to make the change, replacing "proxy.server.address.here:8080" with your proxy server and port (inside the quotes):
+     ```sh
+      PROXY_ADDRESS="proxy.server.address.here:8080"
+      cat <<EOF | sudo tee /var/db/appstore/.curlrc
+      proxy = $PROXY_ADDRESS
+      EOF
+
+      sudo chown -R _appstore:_appstore /var/db/appstore/.curlrc
+      ```
+* If pushing a **System Extension** profile with "Allow users to approve system extensions" set to false (unchecked), note that EC2 Mac instances use a System Extension for its network driver, which is critical to the cloud instance communicating with any external infrastructure. In the event that a profile of this type is pushed, the instance will become out-of-contact and fail a Status Check on the AWS EC2 console, and will be entirely disconnected from network. Allowlisting the EC2 Mac ENA extension will ensure consistent network connectivity.
+    * A profile allowing the team identifier, `R8K7E88CP3` or explicitly the extension `com.amazon.DriverKit.AmazonENAEthernet` would need to be pushed to enrolling EC2 Mac instances **before** other System Extension profile.
+
 
 ---
 
