@@ -510,8 +510,9 @@ on run argv
 			end try
 		end if
 		
-		--Disables the Jamf VM flag, which separates records from MDM enrollments.
+		--Disables the Jamf VM flag, which separates records from MDM enrollments. Setting on both user and global levels.
 		do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
+		do shell script "defaults write com.jamfsoftware.jamf is_virtual_machine 0"
 		
 		--Creates a directory that the Jamf binary needs to function on mac1 instances.
 		try
@@ -841,8 +842,9 @@ on run argv
 				
 				do shell script "echo " & quoted form of (my jamfEnrollmentProfile(invitationID, jamfServerAddress)) & " > /tmp/enrollmentProfile.mobileconfig"
 				
-				--Disable the auto-check for VMs, which separates profiles from agent enrollments.
+				--Disable the auto-check for VMs, which separates profiles from agent enrollments (setting on both user and global levels for compatibility).
 				do shell script "defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0" user name localAdmin password adminPass with administrator privileges
+				do shell script "defaults write com.jamfsoftware.jamf is_virtual_machine 0"
 				
 				--Inventory preload (optional, requires Create/Read/Update Inventory Preload API user permissions for Jamf account)
 				--Activate with: defaults write com.amazon.dsx.ec2.enrollment.automation invPreload 1
