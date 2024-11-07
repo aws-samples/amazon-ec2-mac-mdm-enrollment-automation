@@ -276,8 +276,21 @@ on authCallToken(jamfServer, APIName, APIPass)
 	on error
 		set authToken to "401 Unauthorized"
 	end try
+	try
 	if authToken starts with "401" then
 		--If previous fails, try to authenticate with username and password.
+		set credential64 to (do shell script "printf '" & APIName & ":" & APIPass & "' | /usr/bin/iconv -t ISO-8859-1 | base64 -i -") --Thanks, Bill!
+		set authCall to (do shell script "curl -X POST '" & jamfServer & "api/v1/auth/token' -H 'accept: application/json' -H 'Authorization: Basic " & credential64 & "'")
+		set AppleScript's text item delimiters to ":"
+		set transitionalToken to text item 2 of authCall
+		set AppleScript's text item delimiters to "\",\"expires\""
+		set authToken to text item 1 of transitionalToken as string
+	end if
+	on error
+		set authToken to "401 Unauthorized"
+	end try
+	if authToken starts with "401" then
+		--If previous fails, try to authenticate with username and password (older method).
 		set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "uapi/auth/tokens' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
 		set AppleScript's text item delimiters to ","
 		set {authToken, authTime} to text items of authCall
