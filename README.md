@@ -4,13 +4,12 @@ enroll-ec2-mac is an AppleScript made to **automatically enroll** [Amazon Web Se
 
 ---
 
-[![Thumbnail for a full video walkthrough of setting up an EC2 Mac instance and using this repository for zero-touch MDM enrollment of cloud Macs. The thumbnail is titled "Launch and zero-touch enroll Amazon EC2 Mac into Jamf".](https://img.youtube.com/vi/8JOCR7-cOjc/0.jpg)](https://www.youtube.com/watch?v=8JOCR7-cOjc)
-
-### [This video is a walkthrough of setting up an EC2 Mac and using this repository to automate its enrollment into Jamf MDM.](https://www.youtube.com/watch?v=8JOCR7-cOjc)
+#### Learn more about Amazon EC2 Mac instances [here!](https://github.com/aws-samples/amazon-ec2-mac-getting-started/tree/main/apps-and-scripts)
 
 ---
 
-#### Learn more about Amazon EC2 Mac instances [here!](https://github.com/aws-samples/amazon-ec2-mac-getting-started/tree/main/apps-and-scripts)
+[![Thumbnail for a full video walkthrough of setting up an EC2 Mac instance and using this repository for zero-touch MDM enrollment of cloud Macs. The thumbnail is titled "Launch and zero-touch enroll Amazon EC2 Mac into Jamf".](https://img.youtube.com/vi/8JOCR7-cOjc/0.jpg)](https://www.youtube.com/watch?v=8JOCR7-cOjc)
+#### [Click here for a video walkthrough of setting up an EC2 Mac and using this repository to automate enrollment into Jamf Pro.](https://www.youtube.com/watch?v=8JOCR7-cOjc)
 
 ---
 
