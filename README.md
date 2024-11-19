@@ -30,7 +30,11 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
         * Jamf API Client Credentials are required. The `jamfEnrollmentUser` field holds the **Client ID** and `jamfEnrollmentPassword` holds the **Client Secret**.
         * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings.**.*
         * Additional permissions for Jamf API are required for other optional features, such as preloading information and removing device records.
-        * If using Kandji, set `jamfEnrollmentUser` to `kandji`, then a space, then the enrollment code of your desired blueprint and `jamfEnrollmentPassword` to its blueprint ID.
+        
+        * **Not using Jamf Pro as your MDM?**
+          * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
+          * Support for additional MDMs will be added as available.
+   
     4. `localAdmin` `("ec2-user")`
         1. The default is `ec2-user` unless a change is made outside of these instructions. Must be an administrator account.
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
