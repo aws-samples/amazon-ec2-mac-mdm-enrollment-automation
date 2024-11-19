@@ -31,7 +31,11 @@ on getInvitationID()
 	try
 		--If setting inline, uncomment the below and remove the defaults line.
 		--set theInvitationID to ""
-		set theInvitationID to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invitationID")
+		try
+			set theInvitationID to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invitationID")
+		on error
+			set theInvitationID to (do shell script "defaults read /Library/Preferences/com.amazon.dsx.ec2.enrollment.automation invitationID")
+		end try
 		get theInvitationID
 	on error
 		set theInvitationID to false
@@ -277,15 +281,15 @@ on authCallToken(jamfServer, APIName, APIPass)
 		set authToken to "401 Unauthorized"
 	end try
 	try
-	if authToken starts with "401" then
-		--If previous fails, try to authenticate with username and password.
-		set credential64 to (do shell script "printf '" & APIName & ":" & APIPass & "' | /usr/bin/iconv -t ISO-8859-1 | base64 -i -") --Thanks, Bill!
-		set authCall to (do shell script "curl -X POST '" & jamfServer & "api/v1/auth/token' -H 'accept: application/json' -H 'Authorization: Basic " & credential64 & "'")
-		set AppleScript's text item delimiters to ":"
-		set transitionalToken to text item 2 of authCall
-		set AppleScript's text item delimiters to "\",\"expires\""
-		set authToken to text item 1 of transitionalToken as string
-	end if
+		if authToken starts with "401" then
+			--If previous fails, try to authenticate with username and password.
+			set credential64 to (do shell script "printf '" & APIName & ":" & APIPass & "' | /usr/bin/iconv -t ISO-8859-1 | base64 -i -") --Thanks, Bill!
+			set authCall to (do shell script "curl -X POST '" & jamfServer & "api/v1/auth/token' -H 'accept: application/json' -H 'Authorization: Basic " & credential64 & "'")
+			set AppleScript's text item delimiters to ":"
+			set transitionalToken to text item 2 of authCall
+			set AppleScript's text item delimiters to "\",\"expires\""
+			set authToken to text item 1 of transitionalToken as string
+		end if
 	on error
 		set authToken to "401 Unauthorized"
 	end try
@@ -440,7 +444,7 @@ on run argv
 	set adminPass to my retrieveSecret(currentRegion, jamfSecretID, "localAdminPassword")
 	
 	set mdmServerDomain to jamfServerDomain
-
+	
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
 	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
