@@ -301,6 +301,15 @@ on authCallToken(jamfServer, APIName, APIPass)
 	return authToken
 end authCallToken
 
+on getKandjiProfile(kandjiDomain, kandjiRegion, kandjiBlueprintID, kandjiEnrollmentCode)
+	set AppleScript's text item delimiters to ".kandji.io/"
+	set kandjiPrefix to text item 1 of kandjiDomain
+	set AppleScript's text item delimiters to ""
+	set kandjiAPI to (kandjiPrefix & ".clients." & kandjiRegion & ".kandji.io/app/v1/mdm/enroll-ota/" & kandjiBlueprintID & "?code=" & kandjiEnrollmentCode & " -o /tmp/kandjiEncoded.plist") as string
+	set base64JSONProfile to do shell script "curl " & kandjiAPI
+	do shell script "/usr/bin/plutil -extract base64encodedProfile raw -o - /tmp/kandjiEncoded.plist | base64 -d > /tmp/enrollmentProfile.mobileconfig"
+end getKandjiProfile
+
 --visiLog sends messages to DEPNotify to update visual status.
 on visiLog(updateType, logMessage, privilegedName, privilegedPass)
 	try
@@ -797,13 +806,21 @@ on run argv
 				delay 0.5
 			end if
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
-			if SDKUser is "kandji" then
+			if mdmServerDomain contains "kandji" then
 				--------BEGIN KANDJI PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Kandji.
 				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
-				do shell script "curl " & kandjiServerAddress & "app/v1/mdm/enroll/" & SDKPassword & " -o /tmp/enrollmentProfile.mobileconfig"
+				--Kandji has two main tenants, US and EU. Script will use the same region as the Secret to set.
+				if currentRegion contains "us" then
+					set kandjiTenantRegion to "us-1"
+				else if currentRegion contains "ca" then
+					set kandjiTenantRegion to "us-1"
+				else
+					set kandjiTenantRegion to "eu-1"
+				end if
+				my getKandjiProfile(kandjiServerAddress, kandjiTenantRegion, SDKUser, SDKPassword)
 				--------END KANDJI PROFILE ROUTINES--------
-			else if SDKUser is "addigy" then
+			else if mdmServerDomain contains "addigy" then
 				--------BEGIN ADDIGY PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Addigy.
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
