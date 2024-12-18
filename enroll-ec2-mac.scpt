@@ -1029,11 +1029,25 @@ on run argv
 					my elementCheck("profile", "System Settings")
 					my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
 					delay 0.2
-					click button "Install" of sheet 1 of window 1
+					--Additional button options due to multiple MDMs handling the acceptance window differently.
+					try
+						click button "Install" of sheet 1 of window 1
+					on error
+						my securityCheckVentura()
+						delay 0.5
+						try
+							click button "Install" of sheet 1 of window 1
+						on error
+							try
+								click button "Enroll" of sheet 1 of window 1
+							end try
+						end try
+					end try
 					delay 0.2
 					set the clipboard to adminPass
 					--Checks to make sure the security window appears before typing credentials.
 					my securityCheckVentura()
+					delay 1
 					--Pastes the administrator password, then presses Return.
 					keystroke "v" using command down
 					delay 0.1
