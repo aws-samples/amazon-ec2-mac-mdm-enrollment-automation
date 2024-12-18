@@ -52,10 +52,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 3. Enable **Automatically log in as** for the current user in **System Settings -> Users & Groups.**
 5. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
     1. IMPORTANT: Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
-        - ```
-          defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"
-          ```
-          (replacing what's in quotes above with the ID or ARN of your secret.)
+        - `defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"` (replacing what's in quotes above with the name/ID or ARN of your secret.)
         - *This secret is the one your  **㊙️🪪 IAM Instance Profile** can access.*
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
 6. In **Terminal**, type the following command: 
@@ -70,7 +67,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     2. In the event of an error, click **Re-run** and respond to the prompts again.
     3. If a final prompt or error does not appear after some time (over 2 minutes), run the following command to reload the LaunchAgent and re-run the task:
 ```
-launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist`
+launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist
 ```
 8. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
 **Make sure to click OK before creating your image.** If OK is not clicked, enroll-ec2-mac will *re-attempt setup (and not enrollment)* on subsequent runs until it's clicked.
@@ -85,8 +82,8 @@ launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automati
     1. This process may take an hour or more depending on storage class and data volume.
 13. When new instance is launched using this AMI, it will enroll **automatically**, and without any further intervention. 
     1. IMPORTANT: Ensure that any new instance launched from this AMI has an appropriate **㊙️🪪 IAM instance profile** that can retrieve the credentials.
-    2. Cleanup (`prodFlag`) is available to revoke permissions and remove files.
-    3. Code in `enroll-ec2-mac` can auto-enable Screen Sharing when enrollment is complete.
+    2. For cleanup, (`prodFlag`) is available to revoke permissions and remove files.
+    3. Code in `enroll-ec2-mac` can also auto-enable Screen Sharing when enrollment is complete.
 
 
 
@@ -107,7 +104,6 @@ launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automati
       EOF
 
       sudo chown -R _appstore:_appstore /var/db/appstore/.curlrc
-      ```
 * If pushing a **System Extension** profile with "Allow users to approve system extensions" set to false (unchecked), note that EC2 Mac instances use a System Extension for its network driver, which is **critical** to the cloud instance communicating with any external infrastructure. In the event that a profile of this type is pushed, the instance will become out-of-contact and fail a Status Check on the AWS EC2 console, and will be entirely disconnected from network. Allowlisting the EC2 Mac Elastic Network Adapter (ENA) extension will ensure consistent network connectivity.
     * A profile allowing the team identifier, `R8K7E88CP3` or explicitly the extension `com.amazon.DriverKit.AmazonENAEthernet` would need to be pushed to enrolling EC2 Mac instances **before** other System Extension profile.
 
@@ -135,7 +131,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 
 ## Manual Configuration for AWS Secrets Manager & IAM
 
-enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the Jamf URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance needs an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets, as well. 
+enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the MDM server URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance **needs** an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets. 
 
 The Jamf API permissions for enroll-ec2-mac *only* requires the client have **Create** permission for **Computer Enrollment Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
 
