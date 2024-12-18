@@ -31,7 +31,11 @@ on getInvitationID()
 	try
 		--If setting inline, uncomment the below and remove the defaults line.
 		--set theInvitationID to ""
-		set theInvitationID to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invitationID")
+		try
+			set theInvitationID to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation invitationID")
+		on error
+			set theInvitationID to (do shell script "defaults read /Library/Preferences/com.amazon.dsx.ec2.enrollment.automation invitationID")
+		end try
 		get theInvitationID
 	on error
 		set theInvitationID to false
@@ -276,8 +280,21 @@ on authCallToken(jamfServer, APIName, APIPass)
 	on error
 		set authToken to "401 Unauthorized"
 	end try
+	try
+		if authToken starts with "401" then
+			--If previous fails, try to authenticate with username and password.
+			set credential64 to (do shell script "printf '" & APIName & ":" & APIPass & "' | /usr/bin/iconv -t ISO-8859-1 | base64 -i -") --Thanks, Bill!
+			set authCall to (do shell script "curl -X POST '" & jamfServer & "api/v1/auth/token' -H 'accept: application/json' -H 'Authorization: Basic " & credential64 & "'")
+			set AppleScript's text item delimiters to ":"
+			set transitionalToken to text item 2 of authCall
+			set AppleScript's text item delimiters to "\",\"expires\""
+			set authToken to text item 1 of transitionalToken as string
+		end if
+	on error
+		set authToken to "401 Unauthorized"
+	end try
 	if authToken starts with "401" then
-		--If previous fails, try to authenticate with username and password.
+		--If previous fails, try to authenticate with username and password (older method).
 		set authCall to (do shell script "curl -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' '" & jamfServer & "uapi/auth/tokens' -ksu \"" & APIName & "\":\"" & APIPass & "\" | awk {'print $3'}")
 		set AppleScript's text item delimiters to ","
 		set {authToken, authTime} to text items of authCall
@@ -287,6 +304,15 @@ on authCallToken(jamfServer, APIName, APIPass)
 	end if
 	return authToken
 end authCallToken
+
+on getKandjiProfile(kandjiDomain, kandjiRegion, kandjiBlueprintID, kandjiEnrollmentCode)
+	set AppleScript's text item delimiters to ".kandji.io/"
+	set kandjiPrefix to text item 1 of kandjiDomain
+	set AppleScript's text item delimiters to ""
+	set kandjiAPI to (kandjiPrefix & ".clients." & kandjiRegion & ".kandji.io/app/v1/mdm/enroll-ota/" & kandjiBlueprintID & "?code=" & kandjiEnrollmentCode & " -o /tmp/kandjiEncoded.plist") as string
+	set base64JSONProfile to do shell script "curl " & kandjiAPI
+	do shell script "/usr/bin/plutil -extract base64encodedProfile raw -o - /tmp/kandjiEncoded.plist | base64 -d > /tmp/enrollmentProfile.mobileconfig"
+end getKandjiProfile
 
 --visiLog sends messages to DEPNotify to update visual status.
 on visiLog(updateType, logMessage, privilegedName, privilegedPass)
@@ -418,7 +444,7 @@ on run argv
 	set adminPass to my retrieveSecret(currentRegion, jamfSecretID, "localAdminPassword")
 	
 	set mdmServerDomain to jamfServerDomain
-
+	
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
 	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
@@ -784,13 +810,21 @@ on run argv
 				delay 0.5
 			end if
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
-			if SDKUser is "kandji" then
+			if mdmServerDomain contains "kandji" then
 				--------BEGIN KANDJI PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Kandji.
 				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
-				do shell script "curl " & kandjiServerAddress & "app/v1/mdm/enroll/" & SDKPassword & " -o /tmp/enrollmentProfile.mobileconfig"
+				--Kandji has two main tenants, US and EU. Script will use the same region as the Secret to set.
+				if currentRegion contains "us" then
+					set kandjiTenantRegion to "us-1"
+				else if currentRegion contains "ca" then
+					set kandjiTenantRegion to "us-1"
+				else
+					set kandjiTenantRegion to "eu-1"
+				end if
+				my getKandjiProfile(kandjiServerAddress, kandjiTenantRegion, SDKUser, SDKPassword)
 				--------END KANDJI PROFILE ROUTINES--------
-			else if SDKUser is "addigy" then
+			else if mdmServerDomain contains "addigy" then
 				--------BEGIN ADDIGY PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Addigy.
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
@@ -995,11 +1029,25 @@ on run argv
 					my elementCheck("profile", "System Settings")
 					my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
 					delay 0.2
-					click button "Install" of sheet 1 of window 1
+					--Additional button options due to multiple MDMs handling the acceptance window differently.
+					try
+						click button "Install" of sheet 1 of window 1
+					on error
+						my securityCheckVentura()
+						delay 0.5
+						try
+							click button "Install" of sheet 1 of window 1
+						on error
+							try
+								click button "Enroll" of sheet 1 of window 1
+							end try
+						end try
+					end try
 					delay 0.2
 					set the clipboard to adminPass
 					--Checks to make sure the security window appears before typing credentials.
 					my securityCheckVentura()
+					delay 1
 					--Pastes the administrator password, then presses Return.
 					keystroke "v" using command down
 					delay 0.1
