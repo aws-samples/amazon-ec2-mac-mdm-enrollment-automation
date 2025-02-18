@@ -590,6 +590,11 @@ on run argv
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
+
+	if argv contains "--stop-agent" then
+		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
+		return
+	end if
 	
 	set appName to "enroll-ec2-mac"
 	set jamfSecretID to my MMSecretVar()
