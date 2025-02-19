@@ -23,14 +23,16 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 
 1. Gather the appropriate **credentials** and store them in **AWS Secrets Manager.** If you're using one of the templates, you'll be prompted for each of these. The default secret ID in the script is `jamfSecret`, and requires 5 values for the following keys (with sample values below):
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
+        * Using **Account-Driven Device Enrollment (ADDE)**? Set `jamfServerDomain` to `adde-mm` and put your Managed Apple Account (MAA) details in the fields below.
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
         * For Jamf Pro, these hold a Jamf API `client_id` and `client_secret` created in the **Jamf** console, and its role only requires **Create** permission for **Computer Enrollment Invitations**.
         * Jamf API Client Credentials are required. The `jamfEnrollmentUser` field holds the **Client ID** and `jamfEnrollmentPassword` holds the **Client Secret**.
-        * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings.**.*
+        * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication by default, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings.**.*
         * Additional permissions for Jamf API are required for other optional features, such as preloading information and removing device records.
         
         * **Not using Jamf Pro as your MDM?**
+          * For Account-driven Device Enrollment (ADDE), fill in credentials of Managed Apple Account (MAA) that is **«SET UP HOW EXPERIENCE JAMF IS SET UP—UPDATE»**.
           * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
           * Support for additional MDMs will be added as available.
    
