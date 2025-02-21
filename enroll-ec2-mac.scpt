@@ -1152,6 +1152,14 @@ on run argv
 				if macOSMajor is greater than or equal to 13 then
 					--Ventura runtime starts here.
 					tell application "System Events" to tell process settingsApp
+
+						--Sequoia 15.2
+						try
+							delay 1
+							click button 1 of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+							delay 1
+						end try
+
 						repeat
 							try
 								get value of static text 1 of UI element 1 of row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
