@@ -23,7 +23,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 
 1. Gather the appropriate **credentials** and store them in **AWS Secrets Manager.** If you're using one of the templates, you'll be prompted for each of these. The default secret ID in the script is `jamfSecret`, and requires 5 values for the following keys (with sample values below):
     1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
-        * Using **Account-Driven Device Enrollment (ADDE)**? Set `jamfServerDomain` to `adde-mm` and put your Managed Apple Account (MAA) details in the fields below.
+        * Experimental: **Account-Driven Device Enrollment (ADDE)**? support is being introduced, first for an Okta workflow. Set `jamfServerDomain` to `adde-mm` and put your Managed Apple Account (MAA) details in the fields below.
     2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
         * For Jamf Pro, these hold a Jamf API `client_id` and `client_secret` created in the **Jamf** console, and its role only requires **Create** permission for **Computer Enrollment Invitations**.
@@ -32,7 +32,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
         * Additional permissions for Jamf API are required for other optional features, such as preloading information and removing device records.
         
         * **Not using Jamf Pro as your MDM?**
-          * For Account-driven Device Enrollment (ADDE), fill in credentials of Managed Apple Account (MAA) that is **«SET UP HOW EXPERIENCE JAMF IS SET UP—UPDATE»**.
+          * Experimental: For Account-driven Device Enrollment (ADDE), fill in credentials of the Managed Apple Account (MAA) that is set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
           * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
           * Support for additional MDMs will be added as available.
    
