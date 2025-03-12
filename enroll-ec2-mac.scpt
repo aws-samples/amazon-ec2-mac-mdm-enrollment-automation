@@ -65,6 +65,170 @@ on tripleDouble(incomingURL)
 	return outgoingURL as string
 end tripleDouble
 
+on accountDriven(appleAccountIn, appleAccountPasswordIn, accountEnrollmentType)
+	--Note: ADUE to be added at a later date.
+	do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
+	delay 1
+	tell application "System Events" to tell process "System Settings"
+		click button 1 of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+		delay 2
+		click button 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+		delay 0.5
+		repeat
+			try
+				if (get value of static text 1 of sheet 1 of window 1) contains "remote management configuration" then
+					exit repeat
+				end if
+			on error
+				delay 0.5
+			end try
+		end repeat
+		--await sign-in
+		set value of text field 1 of group 1 of sheet 1 of sheet 1 of window 1 to appleAccountIn
+		delay 0.5
+		click button 1 of sheet 1 of sheet 1 of window 1
+		--await pw or auth dialog
+		repeat
+			try
+				if (get value of static text 1 of sheet 1 of sheet 1 of sheet 1 of window 1) contains "password" then
+					set authPath to "Settings"
+					exit repeat
+				end if
+			on error
+				delay 0.5
+			end try
+			try
+				if (get name of button 2 of sheet 1 of sheet 1 of window 1) contains "Browser" then
+					set authPath to "Safari"
+					exit repeat
+				end if
+			on error
+				delay 0.5
+			end try
+		end repeat
+		delay 0.5
+		if authPath is "Settings" then
+			set value of text field 1 of sheet 1 of sheet 1 of sheet 1 of window "Device Management" to appleAccountPasswordIn
+			delay 0.5
+			click button 2 of sheet 1 of sheet 1 of sheet 1 of window 1
+			--await next step
+		else if authPath is "Safari" then
+			click button 2 of sheet 1 of sheet 1 of window 1
+		end if
+	end tell
+	if authPath is "Safari" then
+		--Safari template taken from Experience Jamf.
+		tell application "System Events" to tell process "Safari"
+			delay 2
+			tell application "Safari" to activate
+			repeat
+				try
+					if (get value of static text 1 of UI element 4 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1) contains "Sign in" then
+						exit repeat
+					end if
+				on error
+					delay 0.5
+				end try
+			end repeat
+			set value of text field 1 of group 7 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1 to appleAccountIn
+			delay 0.5
+			click button 1 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+			delay 0.5
+			repeat
+				try
+					if (get value of static text 1 of static text 1 of group 6 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1) contains "Password" then
+						exit repeat
+					end if
+				on error
+					delay 0.5
+				end try
+			end repeat
+			key code 48
+			click text field 1 of group 7 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+			delay 0.5
+			set the clipboard to appleAccountPasswordIn
+			keystroke "v" using command down
+			delay 0.5
+			set the clipboard to null
+			click button 1 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+			delay 2
+		end tell
+		tell application "System Events" to tell process "System Settings"
+			repeat
+				try
+					if (get name of button 1 of sheet 1 of sheet 1 of window 1) contains "Sign in" then
+						click button 1 of sheet 1 of sheet 1 of window 1
+						exit repeat
+					else
+						delay 0.5
+					end if
+				on error
+					delay 0.5
+				end try
+			end repeat
+			delay 1
+			repeat
+				try
+					click button 2 of group 4 of group 1 of UI element 1 of scroll area 1 of sheet 1 of sheet 1 of sheet 1 of window 1
+					exit repeat
+				on error
+					delay 0.5
+				end try
+			end repeat
+			delay 1
+		end tell
+		tell application "System Events" to tell process "Safari"
+			--run it again
+			tell application "Safari" to activate
+			repeat
+				try
+					if (get value of static text 1 of UI element 4 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1) contains "Sign in" then
+						set value of text field 1 of group 7 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1 to appleAccountIn
+						exit repeat
+					end if
+				on error
+					delay 0.5
+				end try
+			end repeat
+			delay 0.5
+			click button 1 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+			delay 0.5
+			repeat
+				try
+					if (get value of static text 1 of static text 1 of group 6 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1) contains "Password" then
+						key code 48
+						click text field 1 of group 7 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+						delay 0.5
+						set the clipboard to appleAccountPasswordIn
+						keystroke "v" using command down
+						delay 0.5
+						set the clipboard to null
+						delay 0.5
+						exit repeat
+					end if
+				on error
+					delay 0.5
+				end try
+			end repeat
+			click button 1 of group 4 of UI element 1 of scroll area 1 of group 1 of group 1 of tab group 1 of splitter group 1 of window 1
+			delay 1
+		end tell
+		
+		tell application "System Events" to tell process "System Settings"
+			repeat
+				try
+					click button 1 of sheet 1 of sheet 1 of window 1
+					exit repeat
+				on error
+					delay 0.5
+				end try
+			end repeat
+			delay 1
+		end tell
+		--password here, flow returns to post-profile
+	end if
+end accountDriven
+
 --Subroutine for retrieving region and credentials from AWS Secrets Manager.
 on awsMD(MDPath)
 	set sessionToken to (do shell script "curl -X PUT http://169.254.169.254/latest/api/token -s -H 'X-aws-ec2-metadata-token-ttl-seconds: 21600'")
@@ -420,6 +584,16 @@ on run argv
 	
 	if argv contains "--setup" then
 		set argv to "--launchagent --run-agent"
+	end if
+
+	if argv contains "--restart-agent" then
+		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
+		return
+	end if
+
+	if argv contains "--stop-agent" then
+		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
+		return
 	end if
 	
 	set appName to "enroll-ec2-mac"
@@ -810,6 +984,7 @@ on run argv
 				delay 0.5
 			end if
 			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
+			set enrollType to "mdm"
 			if mdmServerDomain contains "kandji" then
 				--------BEGIN KANDJI PROFILE ROUTINES--------
 				--Note: currently there is not yet an out-of-contact profile check/remedy for Kandji.
@@ -830,6 +1005,16 @@ on run argv
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
 				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
+			else if mdmServerDomain contains "adde-mm" then
+				--------BEGIN ADDE ROUTINES--------
+				my accountDriven(SDKUser, SDKPassword, "device")
+				set enrollType to "account"
+				--------END ADDE ROUTINES--------
+			else if mdmServerDomain contains "adue-mm" then
+				--------BEGIN ADUE ROUTINES--------
+				my accountDriven(SDKUser, SDKPassword, "user")
+				set enrollType to "account"
+				--------END ADUE ROUTINES--------
 			else
 				--------BEGIN JAMF PROFILE ROUTINES--------
 				
@@ -898,170 +1083,315 @@ on run argv
 				--------END JAMF PROFILE ROUTINES--------
 			end if
 			--Opens the profile, bringing the UI notification up.
-			do shell script "open /tmp/enrollmentProfile.mobileconfig"
-			delay 0.5
-			my visiLog("Status", "Profile downloaded from management…", localAdmin, adminPass)
-			
-			--A "just in case," as System Preferences doesn't like to be already open to navigate to the pane.
-			try
-				tell application settingsApp to quit
+			if enrollType is not "account" then
+				do shell script "open /tmp/enrollmentProfile.mobileconfig"
 				delay 0.5
-				--my visiLog("QuitPreferences")
-			end try
-			try
-				tell application "BluetoothSetupAssistant" to quit
-				delay 0.5
-				--my visiLog("QuitBTSetupAssistant")
-			end try
-			try
-				do shell script "killall -m BluetoothSetupAssistant"
-			end try
-			
-			--Opens the System Preferences app and navigates to the Profiles pane.
-			do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
-			if macOSMajor is 14 then
-				my windowSearch("Privacy", settingsApp)
-				tell application "System Events" to tell process settingsApp
-					repeat with i from 1 to 10
-						try
-							set paneName to value of (attribute "AXEnabled" of button i of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Privacy & Security")
-						on error
+				my visiLog("Status", "Profile downloaded from management…", localAdmin, adminPass)
+				
+				--A "just in case," as System Preferences doesn't like to be already open to navigate to the pane.
+				try
+					tell application settingsApp to quit
+					delay 0.5
+					--my visiLog("QuitPreferences")
+				end try
+				try
+					tell application "BluetoothSetupAssistant" to quit
+					delay 0.5
+					--my visiLog("QuitBTSetupAssistant")
+				end try
+				try
+					do shell script "killall -m BluetoothSetupAssistant"
+				end try
+				
+				--Opens the System Preferences app and navigates to the Profiles pane.
+				do shell script "open /System/Library/PreferencePanes/Profiles.prefPane"
+				if macOSMajor is 14 then
+					my windowSearch("Privacy", settingsApp)
+					tell application "System Events" to tell process settingsApp
+						repeat with i from 1 to 10
 							try
-								click button (i - 1) of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Privacy & Security"
+								set paneName to value of (attribute "AXEnabled" of button i of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Privacy & Security")
+							on error
+								try
+									click button (i - 1) of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Privacy & Security"
+								end try
+								my windowSearch("Profiles", settingsApp)
+								
+								exit repeat
 							end try
-							my windowSearch("Profiles", settingsApp)
-							
-							exit repeat
+						end repeat
+					end tell
+				else if macOSMajor is 15 then
+					delay 2
+					repeat with sidebarSearch from 2 to 8
+						try
+							tell application "System Events" to tell process "System Settings"
+								if (get value of static text 1 of UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1) contains "Profile" then
+									set sidebarTarget to (UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1)
+									exit repeat
+								end if
+							end tell
 						end try
 					end repeat
-				end tell
-			else if macOSMajor is 15 then
-				delay 2
-				repeat with sidebarSearch from 2 to 8
+					delay 1
+					tell application "System Events" to tell process "System Settings" to tell sidebarTarget
+						set {xPosition, yPosition} to position
+						set {xSize, ySize} to size
+					end tell
+					delay 0.5
 					try
-						tell application "System Events" to tell process "System Settings"
-							if (get value of static text 1 of UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1) contains "Profile" then
-								set sidebarTarget to (UI element 1 of row sidebarSearch of outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1)
-								exit repeat
-							end if
-						end tell
+						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 					end try
-				end repeat
-				delay 1
-				tell application "System Events" to tell process "System Settings" to tell sidebarTarget
-					set {xPosition, yPosition} to position
-					set {xSize, ySize} to size
-				end tell
+				else
+					my windowSearch("Profiles", settingsApp)
+				end if
+				my visiLog("Status", "Starting enrollment…", localAdmin, adminPass)
+				
 				delay 0.5
-				try
-					do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
-				end try
-			else
-				my windowSearch("Profiles", settingsApp)
-			end if
-			my visiLog("Status", "Starting enrollment…", localAdmin, adminPass)
-			
-			delay 0.5
-			
-			if macOSMajor is greater than or equal to 13 then
-				--Ventura runtime starts here.
-				tell application "System Events" to tell process settingsApp
-					repeat
+				
+				if macOSMajor is greater than or equal to 13 then
+					--Ventura runtime starts here.
+					tell application "System Events" to tell process settingsApp
+
+						--Sequoia 15.2
 						try
-							get value of static text 1 of UI element 1 of row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-							exit repeat
+							delay 1
+							click button 1 of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+							delay 1
+						end try
+
+						repeat
+							try
+								get value of static text 1 of UI element 1 of row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+								exit repeat
+							on error
+								try
+									--Sonoma b1
+									get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+									exit repeat
+								end try
+								delay 0.2
+							end try
+						end repeat
+						delay 0.2
+						try
+							set profileCell to row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 						on error
 							try
 								--Sonoma b1
-								get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-								exit repeat
+								set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+							on error
+								--Sequoia 15.0
+								set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 							end try
-							delay 0.2
 						end try
-					end repeat
-					delay 0.2
-					try
-						set profileCell to row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-					on error
-						try
-							--Sonoma b1
-							set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-						on error
-							--Sequoia 15.0
-							set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-						end try
-					end try
-					set {xPosition, yPosition} to position of profileCell
-					set {xSize, ySize} to size of profileCell
-					set clickInstalled to my clickCheck(pathPrefix)
-					if clickInstalled is not true then
-						my visiLog("Status", "Installing helper app…", localAdmin, adminPass)
-						try
-							do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
-						on error
-							--If using a different user than default, change Homebrew ownership.
-							my brewPrivilegeRepair(archType, localAdmin, adminPass)
-							delay 0.5
-							do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
-						end try
-						my visiLog("Status", "Helper app installed, please wait…", localAdmin, adminPass)
-					end if
-					if useDEPNotify is true then
-						do shell script "killall -m DEPNotify" user name localAdmin password adminPass with administrator privileges
-					end if
-					delay 0.2
-					tell application settingsApp to activate
-					do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
-					delay 0.2
-					if useDEPNotify is true then
-						do shell script DEPNotifyPath & "DEPNotify.app/Contents/MacOS/DEPNotify -fullScreen > /dev/null 2>&1 &"
-					end if
-					my visiLog("Status", "Continuing enrollment process…", localAdmin, adminPass)
-					repeat
-						try
-							click button 1 of group 1 of sheet 1 of window 1
-							exit repeat
-						on error
-							delay 0.5
-						end try
-					end repeat
-					delay 0.2
-					my elementCheck("profile", "System Settings")
-					my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
-					delay 0.2
-					--Additional button options due to multiple MDMs handling the acceptance window differently.
-					try
-						click button "Install" of sheet 1 of window 1
-					on error
-						my securityCheckVentura()
-						delay 0.5
+						set {xPosition, yPosition} to position of profileCell
+						set {xSize, ySize} to size of profileCell
+						set clickInstalled to my clickCheck(pathPrefix)
+						if clickInstalled is not true then
+							my visiLog("Status", "Installing helper app…", localAdmin, adminPass)
+							try
+								do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
+							on error
+								--If using a different user than default, change Homebrew ownership.
+								my brewPrivilegeRepair(archType, localAdmin, adminPass)
+								delay 0.5
+								do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
+							end try
+							my visiLog("Status", "Helper app installed, please wait…", localAdmin, adminPass)
+						end if
+						if useDEPNotify is true then
+							do shell script "killall -m DEPNotify" user name localAdmin password adminPass with administrator privileges
+						end if
+						delay 0.2
+						tell application settingsApp to activate
+						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+						delay 0.2
+						if useDEPNotify is true then
+							do shell script DEPNotifyPath & "DEPNotify.app/Contents/MacOS/DEPNotify -fullScreen > /dev/null 2>&1 &"
+						end if
+						my visiLog("Status", "Continuing enrollment process…", localAdmin, adminPass)
+						repeat
+							try
+								click button 1 of group 1 of sheet 1 of window 1
+								exit repeat
+							on error
+								delay 0.5
+							end try
+						end repeat
+						delay 0.2
+						my elementCheck("profile", "System Settings")
+						my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
+						delay 0.2
+						--Additional button options due to multiple MDMs handling the acceptance window differently.
 						try
 							click button "Install" of sheet 1 of window 1
 						on error
+							my securityCheckVentura()
+							delay 0.5
 							try
-								click button "Enroll" of sheet 1 of window 1
+								click button "Install" of sheet 1 of window 1
+							on error
+								try
+									click button "Enroll" of sheet 1 of window 1
+								end try
 							end try
 						end try
-					end try
-					delay 0.2
-					set the clipboard to adminPass
+						delay 0.2
+						set the clipboard to adminPass
+						--Checks to make sure the security window appears before typing credentials.
+						my securityCheckVentura()
+						delay 1
+						--Pastes the administrator password, then presses Return.
+						keystroke "v" using command down
+						delay 0.1
+						if stageHand is "1" then
+							key code 48 using shift down
+							delay 0.1
+							keystroke "a" using command down
+							delay 0.1
+							set the clipboard to localAdmin
+							keystroke "v" using command down
+							delay 0.1
+						end if
+						keystroke return
+						--Immediately clear the clipboard of the password.
+						set the clipboard to null
+						delay 0.1
+						set the clipboard to null
+						my visiLog("Status", "Profile authorized, awaiting enrollment confirmation…", localAdmin, adminPass)
+						repeat
+							try
+								set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+							on error
+								try
+									set managedValidationText to (get value of static text 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1)
+									
+								on error
+									set managedValidationText to ""
+								end try
+							end try
+							if managedValidationText contains "managed" then
+								do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
+								exit repeat
+							else
+								delay 0.5
+							end if
+							try
+								set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+							on error
+								set enrollmentCLI to null
+							end try
+							if enrollmentCLI contains "Yes" then
+								do shell script "killall -m System\\ Settings" user name localAdmin password adminPass with administrator privileges
+								exit repeat
+							end if
+						end repeat
+					end tell
+					
+				else
+					--macOS 12 and below use this set of instructions.
+					tell application "System Events" to tell process "System Preferences"
+						--Make sure the Install button is available before continuing.
+						repeat
+							if (exists button "Install…" of scroll area 1 of window 1) then
+								exit repeat
+							else
+								delay 0.5
+							end if
+						end repeat
+						--Clicks the first "Install…" button…
+						my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
+						click button "Install…" of scroll area 1 of window 1
+						delay 0.2
+						--Checks for the first prompt, containing the word "profile" means it's ready.
+						my elementCheck("profile", "System Preferences")
+						click button "Install" of sheet 1 of window 1
+						delay 0.2
+						--Checks for a string in the next prompt. 
+						if (my elementCheck("Are you sure you want to install profile", "System Preferences")) is not false then
+							click button "Install" of sheet 1 of window 1
+						else
+							display notification "Enrollment failed. Please check the profile and try again."
+							error -128
+						end if
+						delay 0.2
+						set the clipboard to adminPass
+						--Checks to make sure the security window appears before typing credentials.
+						my securityCheck()
+						--Types the administrator password, then presses Return.
+						keystroke "v" using command down
+						delay 0.1
+						if stageHand is "1" then
+							key code 48 using shift down
+							delay 0.1
+							keystroke "a" using command down
+							delay 0.1
+							set the clipboard to localAdmin
+							delay 0.1
+							keystroke "v" using command down
+							delay 0.1
+						end if
+						keystroke return
+						--Immediately clear the clipboard of the password.
+						set the clipboard to null
+						delay 0.2
+						set the clipboard to null
+						keystroke return
+						delay 0.2
+						my visiLog("Status", "Profile authorized, awaiting enrollment confirmation…", localAdmin, adminPass)
+						
+						--Checks to make sure the enrollment completes by checking the field in the lower left corner for updates.
+						repeat
+							if (value of static text 1 of window 1) contains "managed" then
+								do shell script "killall -m System\\ Preferences" user name localAdmin password adminPass with administrator privileges
+								exit repeat
+							else
+								delay 0.5
+							end if
+							try
+								set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
+							on error
+								set enrollmentCLI to null
+							end try
+							if enrollmentCLI contains "Yes" then
+								exit repeat
+							end if
+						end repeat
+					end tell
+				end if
+			else
+				tell application "System Events" to tell process settingsApp
 					--Checks to make sure the security window appears before typing credentials.
 					my securityCheckVentura()
-					delay 1
+					delay 0.5
+					set the clipboard to adminPass
+					delay 0.1
+					tell application "System Events" to tell process "SecurityAgent"
+						tell text field 2 of window 1
+							set {xPosition, yPosition} to position
+							set {xSize, ySize} to size
+						end tell
+						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+					end tell
+					delay 0.5
 					--Pastes the administrator password, then presses Return.
 					keystroke "v" using command down
 					delay 0.1
-					if stageHand is "1" then
-						key code 48 using shift down
-						delay 0.1
-						keystroke "a" using command down
-						delay 0.1
-						set the clipboard to localAdmin
-						keystroke "v" using command down
-						delay 0.1
-					end if
+					try
+						if stageHand is "1" then
+							key code 48 using shift down
+							delay 0.1
+							keystroke "a" using command down
+							delay 0.1
+							set the clipboard to localAdmin
+							keystroke "v" using command down
+							delay 0.1
+						end if
+					end try
 					keystroke return
 					--Immediately clear the clipboard of the password.
+					delay 0.1
 					set the clipboard to null
 					delay 0.1
 					set the clipboard to null
@@ -1094,80 +1424,7 @@ on run argv
 						end if
 					end repeat
 				end tell
-				
-			else
-				--macOS 12 and below use this set of instructions.
-				tell application "System Events" to tell process "System Preferences"
-					--Make sure the Install button is available before continuing.
-					repeat
-						if (exists button "Install…" of scroll area 1 of window 1) then
-							exit repeat
-						else
-							delay 0.5
-						end if
-					end repeat
-					--Clicks the first "Install…" button…
-					my visiLog("Status", "Authorizing profile…", localAdmin, adminPass)
-					click button "Install…" of scroll area 1 of window 1
-					delay 0.2
-					--Checks for the first prompt, containing the word "profile" means it's ready.
-					my elementCheck("profile", "System Preferences")
-					click button "Install" of sheet 1 of window 1
-					delay 0.2
-					--Checks for a string in the next prompt. 
-					if (my elementCheck("Are you sure you want to install profile", "System Preferences")) is not false then
-						click button "Install" of sheet 1 of window 1
-					else
-						display notification "Enrollment failed. Please check the profile and try again."
-						error -128
-					end if
-					delay 0.2
-					set the clipboard to adminPass
-					--Checks to make sure the security window appears before typing credentials.
-					my securityCheck()
-					--Types the administrator password, then presses Return.
-					keystroke "v" using command down
-					delay 0.1
-					if stageHand is "1" then
-						key code 48 using shift down
-						delay 0.1
-						keystroke "a" using command down
-						delay 0.1
-						set the clipboard to localAdmin
-						delay 0.1
-						keystroke "v" using command down
-						delay 0.1
-					end if
-					keystroke return
-					--Immediately clear the clipboard of the password.
-					set the clipboard to null
-					delay 0.2
-					set the clipboard to null
-					keystroke return
-					delay 0.2
-					my visiLog("Status", "Profile authorized, awaiting enrollment confirmation…", localAdmin, adminPass)
-					
-					--Checks to make sure the enrollment completes by checking the field in the lower left corner for updates.
-					repeat
-						if (value of static text 1 of window 1) contains "managed" then
-							do shell script "killall -m System\\ Preferences" user name localAdmin password adminPass with administrator privileges
-							exit repeat
-						else
-							delay 0.5
-						end if
-						try
-							set enrollmentCLI to (do shell script "/usr/bin/profiles status -type enrollment | awk '/MDM/' | grep 'enrollment: Yes' ")
-						on error
-							set enrollmentCLI to null
-						end try
-						if enrollmentCLI contains "Yes" then
-							exit repeat
-						end if
-					end repeat
-				end tell
 			end if
-			
-			
 			
 			--Enable screen sharing for user to connect. May be embedded, but good for "access enabled after enrollment." This flow only works if the AMI is prepared with auto-login.
 			do shell script "launchctl enable system/com.apple.screensharing" user name localAdmin password adminPass with administrator privileges
