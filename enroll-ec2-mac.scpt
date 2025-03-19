@@ -323,6 +323,8 @@ on dsUIScriptEnable()
 			set OSMajor to 13
 		else if OSVersion starts with "14" then
 			set OSMajor to 14
+		else if OSVersion starts with "15" then
+			set OSMajor to 15
 		else
 			set OSMajor to 11
 		end if
