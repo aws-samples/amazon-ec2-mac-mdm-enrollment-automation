@@ -587,12 +587,12 @@ on run argv
 	if argv contains "--setup" then
 		set argv to "--launchagent --run-agent"
 	end if
-
+	
 	if argv contains "--restart-agent" then
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
-
+	
 	if argv contains "--stop-agent" then
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
@@ -812,10 +812,10 @@ on run argv
 							end tell
 							delay 0.5
 							try
-								do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+								do shell script pathPrefix & "/opt/homebrew/bin/cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 							on error
 								do shell script pathPrefix & brewUpdateFlag & "brew install cliclick"
-								do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+								do shell script pathPrefix & "/opt/homebrew/bin/cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 							end try
 						end try
 						set accessTotal to (accessTotal + 1)
@@ -1142,7 +1142,7 @@ on run argv
 					end tell
 					delay 0.5
 					try
-						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+						do shell script pathPrefix & "/opt/homebrew/bin/cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 					end try
 				else
 					my windowSearch("Profiles", settingsApp)
@@ -1154,14 +1154,14 @@ on run argv
 				if macOSMajor is greater than or equal to 13 then
 					--Ventura runtime starts here.
 					tell application "System Events" to tell process settingsApp
-
+						
 						--Sequoia 15.2
 						try
 							delay 1
 							click button 1 of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 							delay 1
 						end try
-
+						
 						repeat
 							try
 								get value of static text 1 of UI element 1 of row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
@@ -1207,7 +1207,7 @@ on run argv
 						end if
 						delay 0.2
 						tell application settingsApp to activate
-						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+						do shell script pathPrefix & "/opt/homebrew/bin/cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 						delay 0.2
 						if useDEPNotify is true then
 							do shell script DEPNotifyPath & "DEPNotify.app/Contents/MacOS/DEPNotify -fullScreen > /dev/null 2>&1 &"
@@ -1374,7 +1374,7 @@ on run argv
 							set {xPosition, yPosition} to position
 							set {xSize, ySize} to size
 						end tell
-						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
+						do shell script pathPrefix & "/opt/homebrew/bin/cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 					end tell
 					delay 0.5
 					--Pastes the administrator password, then presses Return.
