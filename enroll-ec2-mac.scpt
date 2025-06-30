@@ -749,7 +749,7 @@ on run argv
 			--This needs to run twice in order to get the alert…it's primarily why the script contains the extra repeat for --firstrun.
 			if useDEPNotify is true then
 				try
-					do shell script "curl -s https://files.nomad.menu/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
+					do shell script "curl -s https://files.jamfconnect.com/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
 					set accessTotal to (accessTotal + 1)
 					set progress completed steps to accessTotal
 				on error
@@ -979,7 +979,7 @@ on run argv
 			
 			--Download and open DEPNotify to mask screen during actions (if enabled).
 			if useDEPNotify is true then
-				do shell script "curl -s https://files.nomad.menu/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
+				do shell script "curl -s https://files.jamfconnect.com/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
 				do shell script DEPNotifyPath & "DEPNotify.app/Contents/MacOS/DEPNotify -fullScreen > /dev/null 2>&1 &"
 				delay 0.5
 			end if
