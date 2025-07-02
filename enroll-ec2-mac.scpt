@@ -316,6 +316,7 @@ on dsUIScriptEnable()
 	set AppleScript's text item delimiters to "."
 	set OSVersion to text item 1 of system version of (system info)
 	set AppleScript's text item delimiters to ""
+	set self to name of current application
 	tell application "System Events"
 		set UIEnabledStatus to (get UI elements enabled)
 	end tell
