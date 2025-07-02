@@ -313,22 +313,20 @@ end retrieveSecret
 
 --This subroutine checks if Accessibility permissions are in place.
 on dsUIScriptEnable()
-	set self to name of current application
-	set OSVersion to system version of (system info)
+	set AppleScript's text item delimiters to "."
+	set OSVersion to text item 1 of system version of (system info)
+	set AppleScript's text item delimiters to ""
 	tell application "System Events"
 		set UIEnabledStatus to (get UI elements enabled)
 	end tell
 	if UIEnabledStatus is not true then
-		if OSVersion starts with "13" then
-			set OSMajor to 13
-		else if OSVersion starts with "14" then
-			set OSMajor to 14
-		else
-			set OSMajor to 11
-		end if
-		if OSMajor is greater than or equal to 13 then
+		if OSVersion is greater than or equal to 13 then
 			set activeSettingsApp to "System Settings"
-			display dialog "This script requires Accessibility permissions to function. After clicking OK on this message, please click Accessibility on the right side (you may need to scroll down), and click the switch next to " & self & " on the right."
+			if OSVersion is greater than or equal to 15 then
+				display dialog "This script requires Accessibility permissions to function. After clicking OK on this message, please click Privacy & Security on the left side, then scroll down to Accessibility on the right side. Click the switch next to " & self & " on the right."
+			else
+				display dialog "This script requires Accessibility permissions to function. After clicking OK on this message, please click Accessibility on the right side (you may need to scroll down), and click the switch next to " & self & " on the right."
+			end if
 			do shell script "open /System/Library/PreferencePanes/Security.prefPane"
 		else
 			set activeSettingsApp to "System Preferences"
@@ -341,7 +339,7 @@ on dsUIScriptEnable()
 			tell application "System Events"
 				set UIEnabledStatus to (get UI elements enabled)
 			end tell
-			delay 0.5
+			delay 10
 		end repeat
 		display notification "Thank you! " & self & " will now run."
 	end if
@@ -668,21 +666,15 @@ on run argv
 		set autoLogin to "1"
 	end try
 	
-	set macOSVersion to system version of (system info)
+	set AppleScript's text item delimiters to "."
+	set macOSMajor to text item 1 of system version of (system info)
+	set AppleScript's text item delimiters to ""
 	set archType to CPU type of (system info)
 	
-	if macOSVersion starts with "13" then
+	if macOSMajor is greater than or equal to "13" then
 		set settingsApp to "System Settings"
-		set macOSMajor to 13
-	else if macOSVersion starts with "14" then
-		set settingsApp to "System Settings"
-		set macOSMajor to 14
-	else if macOSVersion starts with "15" then
-		set settingsApp to "System Settings"
-		set macOSMajor to 15
 	else
 		set settingsApp to "System Preferences"
-		set macOSMajor to 12
 	end if
 	
 	--Set to "" instead to enable auto-update of homebrew.
@@ -749,7 +741,7 @@ on run argv
 			--This needs to run twice in order to get the alert…it's primarily why the script contains the extra repeat for --firstrun.
 			if useDEPNotify is true then
 				try
-					do shell script "curl -s https://files.nomad.menu/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
+					do shell script "curl -s https://files.jamfconnect.com/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
 					set accessTotal to (accessTotal + 1)
 					set progress completed steps to accessTotal
 				on error
@@ -979,11 +971,11 @@ on run argv
 			
 			--Download and open DEPNotify to mask screen during actions (if enabled).
 			if useDEPNotify is true then
-				do shell script "curl -s https://files.nomad.menu/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
+				do shell script "curl -s https://files.jamfconnect.com/DEPNotify.zip > /tmp/DEPNotify.zip ; unzip -o /tmp/DEPNotify.zip -d " & DEPNotifyPath
 				do shell script DEPNotifyPath & "DEPNotify.app/Contents/MacOS/DEPNotify -fullScreen > /dev/null 2>&1 &"
 				delay 0.5
 			end if
-			my visiLog("Status", ("macOS " & macOSVersion & " (" & archType & " architecture)."), localAdmin, adminPass)
+			my visiLog("Status", ("macOS " & macOSMajor & " (" & archType & " architecture)."), localAdmin, adminPass)
 			set enrollType to "mdm"
 			if mdmServerDomain contains "kandji" then
 				--------BEGIN KANDJI PROFILE ROUTINES--------
