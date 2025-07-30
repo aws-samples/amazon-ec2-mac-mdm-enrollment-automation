@@ -477,6 +477,21 @@ on getKandjiProfile(kandjiDomain, kandjiRegion, kandjiBlueprintID, kandjiEnrollm
 	do shell script "/usr/bin/plutil -extract base64encodedProfile raw -o - /tmp/kandjiEncoded.plist | base64 -d > /tmp/enrollmentProfile.mobileconfig"
 end getKandjiProfile
 
+on fleetAuthToken(fleetServerIn, fleetAPIName, fleetAPIPass)
+	--Attempts to connect via Fleet Credentials.
+	set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
+	set authToken to (do shell script curlPath & " -H 'Content-Type: application/json' -L '" & fleetServerIn & "/api/v1/fleet/login' --data-raw '{ \"email\": \"" & fleetAPIName & "\", \"password\": \"" & fleetAPIPass & "\"}' | grep 'token' | awk '{print $NF}' | tr -d '\"\\'")
+	return authToken
+end fleetAuthToken
+
+on fleetEnrollment(fleetServerIn, fleetAPITokenIn)
+	--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
+	set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
+	--set curlPath to "/usr/bin/curl"
+	set profileXML to (do shell script curlPath & " -L '" & fleetServerIn & "/api/v1/fleet/enrollment_profiles/manual' -H 'Authorization: Bearer " & fleetAPITokenIn & "' > /tmp/enrollmentProfile.mobileconfig")
+	return profileXML
+end fleetEnrollment
+
 --visiLog sends messages to DEPNotify to update visual status.
 on visiLog(updateType, logMessage, privilegedName, privilegedPass)
 	try
@@ -584,12 +599,12 @@ on run argv
 	if argv contains "--setup" then
 		set argv to "--launchagent --run-agent"
 	end if
-
+	
 	if argv contains "--restart-agent" then
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
-
+	
 	if argv contains "--stop-agent" then
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
@@ -998,6 +1013,16 @@ on run argv
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
 				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
+			else if mdmServerDomain contains "fleet" then
+				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
+				do shell script pathPrefix & brewUpdateFlag & "brew install curl"
+				set AppleScript's text item delimiters to "fleet-"
+				set fleetAddress to text item 2 of mdmServerDomain
+				set AppleScript's text item delimiters to ""
+				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
+				set currentFleetToken to fleetAuthToken(fleetAddress, SDKUser, SDKPassword)
+				my fleetEnrollment(fleetAddress, currentFleetToken)
+				
 			else if mdmServerDomain contains "adde-mm" then
 				--------BEGIN ADDE ROUTINES--------
 				my accountDriven(SDKUser, SDKPassword, "device")
@@ -1145,14 +1170,14 @@ on run argv
 				if macOSMajor is greater than or equal to 13 then
 					--Ventura runtime starts here.
 					tell application "System Events" to tell process settingsApp
-
+						
 						--Sequoia 15.2
 						try
 							delay 1
 							click button 1 of group 6 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 							delay 1
 						end try
-
+						
 						repeat
 							try
 								get value of static text 1 of UI element 1 of row 2 of table 1 of scroll area 1 of group 1 of scroll area 1 of group 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
