@@ -668,7 +668,7 @@ on run argv
 	end try
 	
 	set AppleScript's text item delimiters to "."
-	set macOSMajor to text item 1 of system version of (system info)
+	set macOSMajor to text item 1 of system version of (system info) as integer
 	set AppleScript's text item delimiters to ""
 	set archType to CPU type of (system info)
 	
