@@ -1014,15 +1014,16 @@ on run argv
 				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
 			else if mdmServerDomain contains "fleet" then
+				--------BEGIN FLEET PROFILE ROUTINES--------
 				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
 				do shell script pathPrefix & brewUpdateFlag & "brew install curl"
 				set AppleScript's text item delimiters to "fleet-"
 				set fleetAddress to text item 2 of mdmServerDomain
 				set AppleScript's text item delimiters to ""
-				set kandjiServerAddress to (my tripleDouble(mdmServerDomain))
+				set fleetAddress to (my tripleDouble(fleetAddress))
 				set currentFleetToken to fleetAuthToken(fleetAddress, SDKUser, SDKPassword)
 				my fleetEnrollment(fleetAddress, currentFleetToken)
-				
+				--------END FLEET PROFILE ROUTINES--------				
 			else if mdmServerDomain contains "adde-mm" then
 				--------BEGIN ADDE ROUTINES--------
 				my accountDriven(SDKUser, SDKPassword, "device")
