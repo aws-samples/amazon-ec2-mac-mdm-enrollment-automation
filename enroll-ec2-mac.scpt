@@ -314,7 +314,7 @@ end retrieveSecret
 --This subroutine checks if Accessibility permissions are in place.
 on dsUIScriptEnable()
 	set AppleScript's text item delimiters to "."
-	set OSVersion to text item 1 of system version of (system info)
+	set OSVersion to text item 1 of system version of (system info) as integer
 	set AppleScript's text item delimiters to ""
 	set self to name of current application
 	tell application "System Events"
@@ -683,7 +683,7 @@ on run argv
 	end try
 	
 	set AppleScript's text item delimiters to "."
-	set macOSMajor to text item 1 of system version of (system info)
+	set macOSMajor to text item 1 of system version of (system info) as integer
 	set AppleScript's text item delimiters to ""
 	set archType to CPU type of (system info)
 	
