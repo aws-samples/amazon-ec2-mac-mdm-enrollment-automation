@@ -1016,12 +1016,18 @@ on run argv
 			else if mdmServerDomain contains "fleet" then
 				--------BEGIN FLEET PROFILE ROUTINES--------
 				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
-				do shell script pathPrefix & brewUpdateFlag & "brew install curl"
+			else if mdmServerDomain contains "fleet" then
+				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
+				--do shell script pathPrefix & brewUpdateFlag & "brew install curl"
 				set AppleScript's text item delimiters to "fleet-"
 				set fleetAddress to text item 2 of mdmServerDomain
 				set AppleScript's text item delimiters to ""
 				set fleetAddress to (my tripleDouble(fleetAddress))
-				set currentFleetToken to fleetAuthToken(fleetAddress, SDKUser, SDKPassword)
+				if SDKUser is not "fleet-token" then
+					set currentFleetToken to fleetAuthToken(fleetAddress, SDKUser, SDKPassword)
+				else
+					set currentFleetToken to SDKPassword
+				end if
 				my fleetEnrollment(fleetAddress, currentFleetToken)
 				--------END FLEET PROFILE ROUTINES--------				
 			else if mdmServerDomain contains "adde-mm" then
