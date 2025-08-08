@@ -28,12 +28,17 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
         * For Jamf Pro, these hold a Jamf API `client_id` and `client_secret` created in the **Jamf** console, and its role only requires **Create** permission for **Computer Enrollment Invitations**.
         * Jamf API Client Credentials are required. The `jamfEnrollmentUser` field holds the **Client ID** and `jamfEnrollmentPassword` holds the **Client Secret**.
-        * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication by default, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings.**.*
+        * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication by default, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings**.*
         * Additional permissions for Jamf API are required for other optional features, such as preloading information and removing device records.
         
         * **Not using Jamf Pro as your MDM?**
-          * Experimental: For Account-driven Device Enrollment (ADDE), fill in credentials of the Managed Apple Account (MAA) that is set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
+          
+          * If using **Addigy**, set `jamfServerDomain` to the **path (URL) of your enrollment profile**, found in the Addigy console under *Add Devices -> Manual Device Enrollment -> Copy URL*. (`jamfEnrollmentUser` and `jamfEnrollmentPassword` may be left blank or set arbitrarily as these are not used in Addigy enrollment.)
           * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
+          * If using **Fleet**, set `jamfServerDomain` to your Fleet URL beginning with `fleet-` (e.g. `fleet-myfleetserver.example.com`).
+            * For API token authentication, set `jamfEnrollmentUser` to `fleet-token` and `jamfEnrollmentPassword` to your API token.
+            * For username/password authentication, set `jamfEnrollmentUser` to the Fleet server account's email address and `jamfEnrollmentPassword` to the Fleet account's password.
+          * Experimental: For Account-driven Device Enrollment (ADDE), fill in the credentials of the Managed Apple Account (MAA) set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
           * Support for additional MDMs will be added as available.
    
     4. `localAdmin` `("ec2-user")`
@@ -41,6 +46,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
     5. `localAdminPassword` `("l0c4l3x4mplep455w0rd")`
         1. Password for `localAdmin` administrator account.
         2. These credentials may be reset/cleared programmatically after enrollment completes.
+           
 2. Create AWS **Identity and Access Management (IAM) assets** to enable access to the above secret. The IAM policy, role, and instance profile (noted here with ㊙️🪪, the emoji for "Secret" and "Identification," and placed throughout for emphasis) are all automatically created with either template. See near the end for a sample manual policy.
     1. Attach this **㊙️🪪 IAM Instance Profile** to the instance you're starting. 
 
@@ -67,22 +73,34 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
         - During this process, it is normal for the screen to flash a few times.
         - *Optional: if `useDEPNotify` is set to `true`, or the `--with-screen` flag is used, prompts for **App Management** will appear and the screen will flash. DEPNotify is used to keep users from interfering in the enrollment process, but is optional if automatic login is set, since enrollment can transparently occur before a user logs in.*
     2. In the event of an error, click **Re-run** and respond to the prompts again.
-    3. If a final prompt or error does not appear after some time (over 2 minutes), run the following command to reload the LaunchAgent and re-run the task:
+    3. If a final prompt or error does not appear after some time (over 2 minutes), run:
 ```
-launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist
+    osascript /Users/Shared/enroll-ec2-mac.scpt --restart-agent
 ```
-8. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
-**Make sure to click OK before creating your image.** If OK is not clicked, enroll-ec2-mac will *re-attempt setup (and not enrollment)* on subsequent runs until it's clicked.
+
+or
+
+```
+    launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w       /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist
+```
+    
+to reload the LaunchAgent and re-run the task.
+
+
+9. Once you receive the below message, **click OK** and close Screen Sharing/VNC. ![A dialog box with a success message for enroll-ec2-mac.](SetupComplete.png)
+
+**Make sure to click OK before creating your image.** This makes a final change to the LaunchAgent, taking it out of setup mode and readying automated enrollment. If OK is not clicked, enroll-ec2-mac will *re-attempt setup on next launch (and not enrollment)* on subsequent runs until it's clicked.
+
 10. Optional: **disable screen sharing** via the command line.
     1. `sudo launchctl disable system/com.apple.screensharing ; sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.screensharing.plist`
 11. After clicking OK, [**Create an image**](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html) from the running instance.
     1. Follow the linked instructions to **Create a Linux AMI from an instance** (instructions also cover macOS instances).
-    2. Workflow was tested with **“No reboot”** enabled.
-        - *Note: if the instance is rebooted or logged out after clicking OK,* **enrollment will occur.**
+    2. Workflow was tested with **“No reboot”** enabled, but is not required.
+        - *Note: if the instance is rebooted or logged out after clicking OK (and before creating the image),* **enrollment will occur.**
     3. “Delete on termination” is recommended to be **unchecked** to keep the AMI after [terminating the template instance](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/preserving-volumes-on-termination.html).
 12. When AMI moves from **Pending** to **Available**, launch a new instance with the AMI. 
     1. This process may take an hour or more depending on storage class and data volume.
-13. When new instance is launched using this AMI, it will enroll **automatically**, and without any further intervention. 
+13. When a new instance is launched using this AMI, it will enroll **automatically**, without any further intervention. 
     1. IMPORTANT: Ensure that any new instance launched from this AMI has an appropriate **㊙️🪪 IAM instance profile** that can retrieve the credentials.
     2. For cleanup, (`prodFlag`) is available to revoke permissions and remove files.
     3. Code in `enroll-ec2-mac` can also auto-enable Screen Sharing when enrollment is complete.
