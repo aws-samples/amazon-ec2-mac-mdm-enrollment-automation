@@ -686,8 +686,9 @@ on run argv
 	set macOSMajor to text item 1 of system version of (system info) as integer
 	set AppleScript's text item delimiters to ""
 	set archType to CPU type of (system info)
+	log "macOS " & macOSMajor
 	
-	if macOSMajor is greater than or equal to "13" then
+	if macOSMajor is greater than or equal to 13 then
 		set settingsApp to "System Settings"
 	else
 		set settingsApp to "System Preferences"
