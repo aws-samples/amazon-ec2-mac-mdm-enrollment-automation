@@ -486,8 +486,8 @@ end fleetAuthToken
 
 on fleetEnrollment(fleetServerIn, fleetAPITokenIn)
 	--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
-	set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
-	--set curlPath to "/usr/bin/curl"
+	--set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
+	set curlPath to "/usr/bin/curl"
 	set profileXML to (do shell script curlPath & " -L '" & fleetServerIn & "/api/v1/fleet/enrollment_profiles/manual' -H 'Authorization: Bearer " & fleetAPITokenIn & "' > /tmp/enrollmentProfile.mobileconfig")
 	return profileXML
 end fleetEnrollment
@@ -1014,9 +1014,6 @@ on run argv
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
 				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
-			else if mdmServerDomain contains "fleet" then
-				--------BEGIN FLEET PROFILE ROUTINES--------
-				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
 			else if mdmServerDomain contains "fleet" then
 				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
 				--do shell script pathPrefix & brewUpdateFlag & "brew install curl"
