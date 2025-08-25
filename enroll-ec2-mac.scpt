@@ -479,15 +479,17 @@ end getKandjiProfile
 
 on fleetAuthToken(fleetServerIn, fleetAPIName, fleetAPIPass)
 	--Attempts to connect via Fleet Credentials.
+	--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
 	set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
+	--set curlPath to "/usr/bin/curl"
 	set authToken to (do shell script curlPath & " -H 'Content-Type: application/json' -L '" & fleetServerIn & "/api/v1/fleet/login' --data-raw '{ \"email\": \"" & fleetAPIName & "\", \"password\": \"" & fleetAPIPass & "\"}' | grep 'token' | awk '{print $NF}' | tr -d '\"\\'")
 	return authToken
 end fleetAuthToken
 
 on fleetEnrollment(fleetServerIn, fleetAPITokenIn)
 	--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
-	--set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
-	set curlPath to "/usr/bin/curl"
+	set curlPath to "/opt/homebrew/opt/curl/bin/curl -k"
+	--set curlPath to "/usr/bin/curl"
 	set profileXML to (do shell script curlPath & " -L '" & fleetServerIn & "/api/v1/fleet/enrollment_profiles/manual' -H 'Authorization: Bearer " & fleetAPITokenIn & "' > /tmp/enrollmentProfile.mobileconfig")
 	return profileXML
 end fleetEnrollment
@@ -1014,10 +1016,10 @@ on run argv
 				set addigyAddress to (my tripleDouble(mdmServerDomain))
 				do shell script "curl " & addigyAddress & " -o /tmp/enrollmentProfile.mobileconfig"
 				--------END ADDIGY PROFILE ROUTINES--------
-			else if mdmServerDomain contains "fleet" then
+			else if mdmServerDomain contains "fleet=" then
 				--If testing Fleet with a self-signed certificate, the Homebrew version of curl is required (with the -k flag).
-				--do shell script pathPrefix & brewUpdateFlag & "brew install curl"
-				set AppleScript's text item delimiters to "fleet-"
+				do shell script pathPrefix & brewUpdateFlag & "brew install curl"
+				set AppleScript's text item delimiters to "fleet="
 				set fleetAddress to text item 2 of mdmServerDomain
 				set AppleScript's text item delimiters to ""
 				set fleetAddress to (my tripleDouble(fleetAddress))

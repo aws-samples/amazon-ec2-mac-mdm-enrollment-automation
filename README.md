@@ -35,7 +35,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
           
           * If using **Addigy**, set `jamfServerDomain` to the **path (URL) of your enrollment profile**, found in the Addigy console under *Add Devices -> Manual Device Enrollment -> Copy URL*. (`jamfEnrollmentUser` and `jamfEnrollmentPassword` may be left blank or set arbitrarily as these are not used in Addigy enrollment.)
           * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
-          * If using **Fleet**, set `jamfServerDomain` to your Fleet URL beginning with `fleet-` (e.g. `fleet-myfleetserver.example.com`).
+          * If using **Fleet**, set `jamfServerDomain` to your Fleet URL beginning with `fleet=` (e.g. `fleet-myfleetserver.example.com`).
             * For API token authentication, set `jamfEnrollmentUser` to `fleet-token` and `jamfEnrollmentPassword` to your API token.
             * For username/password authentication, set `jamfEnrollmentUser` to the Fleet server account's email address and `jamfEnrollmentPassword` to the Fleet account's password.
           * Experimental: For Account-driven Device Enrollment (ADDE), fill in the credentials of the Managed Apple Account (MAA) set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
