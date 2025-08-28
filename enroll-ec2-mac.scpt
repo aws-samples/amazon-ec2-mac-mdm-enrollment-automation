@@ -629,16 +629,23 @@ on run argv
 	on error
 		set currentRegion to (my awsMD("placement/region"))
 	end try
+	
+	set templateType to "mdm"
+	set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, templateType & "ServerDomain")
+	set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentUser")
+	set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentPassword")
+	set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
+	set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
+	
 	try
-		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, "mdmServerDomain")
-		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, "mdmEnrollmentUser")
-		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, "mdmEnrollmentPassword")
-		set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
-		set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
+		--Basic test of validity of the server address.
+		my tripleDouble(mdmServerDomain)
 	on error
-		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, "jamfServerDomain")
-		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, "jamfEnrollmentUser")
-		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, "jamfEnrollmentPassword")
+		--Compatibility with legacy Secrets Manager templates.
+		set templateType to "jamf"
+		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, templateType & "ServerDomain")
+		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentUser")
+		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentPassword")
 		set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
 		set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
 	end try
@@ -1285,7 +1292,7 @@ on run argv
 							delay 0.1
 							set the clipboard to localAdmin
 							keystroke "v" using command down
-							delay 0.1
+							delay 0.2
 						end if
 						keystroke return
 						--Immediately clear the clipboard of the password.
