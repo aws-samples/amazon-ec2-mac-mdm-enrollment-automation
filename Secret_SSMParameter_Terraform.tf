@@ -1,17 +1,17 @@
-variable "JamfDomainNameOrIP" {
-  description = "Jamf domain name or IP address"
+variable "MDMDomainNameOrIP" {
+  description = "MDM domain name or IP address"
   type        = string
   sensitive   = false
 }
 
-variable "JamfEnrollmentUser" {
-  description = "Jamf username with privileges to create computer invitations."
+variable "MDMEnrollmentUser" {
+  description = "MDM API username or client ID with privileges to create computer invitations."
   type        = string
   sensitive   = false
 }
 
-variable "JamfEnrollmentUserPassword" {
-  description = "Password for Jamf user with privileges to create computer invitations."
+variable "MDMEnrollmentUserPassword" {
+  description = "Password for MDM user or client secret with privileges to create computer invitations."
   type        = string
   sensitive   = true
 }
@@ -29,17 +29,17 @@ variable "LocalAdminPassword" {
   sensitive   = true
 }
 
-resource "aws_ssm_parameter" "jamfCredentialsTF" {
-  name = "jamfCredentialsTF"
+resource "aws_ssm_parameter" "mdmCredentialsTF" {
+  name = "mdmCredentialsTF"
   type        = "String"
 #   If using the non-default key for the region, uncomment below and replace with your key ID.
 #   key_id = "replace_with_kms_key_id"
   value = <<EOF
-{"jamfServerDomain":"${var.JamfDomainNameOrIP}","jamfEnrollmentUser":"${var.JamfEnrollmentUser}","jamfEnrollmentPassword":"${var.JamfEnrollmentUserPassword}","localAdmin":"${var.LocalAdmin}","localAdminPassword":"${var.LocalAdminPassword}"}
+{"mdmServerDomain":"${var.MDMDomainNameOrIP}","mdmEnrollmentUser":"${var.MDMEnrollmentUser}","mdmEnrollmentPassword":"${var.MDMEnrollmentUserPassword}","localAdmin":"${var.LocalAdmin}","localAdminPassword":"${var.LocalAdminPassword}"}
 EOF
 }
 
-data "aws_iam_policy_document" "jamfCredentialAccessPolicyDoc" {
+data "aws_iam_policy_document" "mdmCredentialAccessPolicyDoc" {
   statement {
     actions = [
       "ssm:GetParameters",
@@ -49,17 +49,17 @@ data "aws_iam_policy_document" "jamfCredentialAccessPolicyDoc" {
       "ssm:GetParameterHistory"
     ]
     resources = [
-      aws_ssm_parameter.jamfCredentialsTF.arn
+      aws_ssm_parameter.mdmCredentialsTF.arn
     ]
   }
 }
 
-resource "aws_iam_role" "jamfCredentialAccessRole" {
-  name               = "jamfCredentialAccessRole"
-  assume_role_policy = data.aws_iam_policy_document.jamfCredentialAssumeRole.json
+resource "aws_iam_role" "mdmCredentialAccessRole" {
+  name               = "mdmCredentialAccessRole"
+  assume_role_policy = data.aws_iam_policy_document.mdmCredentialAssumeRole.json
 }
 
-data "aws_iam_policy_document" "jamfCredentialAssumeRole" {
+data "aws_iam_policy_document" "mdmCredentialAssumeRole" {
   statement {
     actions = [
       "sts:AssumeRole"
@@ -72,21 +72,21 @@ data "aws_iam_policy_document" "jamfCredentialAssumeRole" {
   }
 }
 
-resource "aws_iam_policy" "jamfCredentialAccess" {
-  name   = "jamfCredentialAccess"
-  policy = data.aws_iam_policy_document.jamfCredentialAccessPolicyDoc.json
+resource "aws_iam_policy" "mdmCredentialAccess" {
+  name   = "mdmCredentialAccess"
+  policy = data.aws_iam_policy_document.mdmCredentialAccessPolicyDoc.json
 }
 
-resource "aws_iam_role_policy_attachment" "jamfCredentialAccessAttach" {
-  role       = aws_iam_role.jamfCredentialAccessRole.name
-  policy_arn = aws_iam_policy.jamfCredentialAccess.arn
+resource "aws_iam_role_policy_attachment" "mdmCredentialAccessAttach" {
+  role       = aws_iam_role.mdmCredentialAccessRole.name
+  policy_arn = aws_iam_policy.mdmCredentialAccess.arn
 }
 
-resource "aws_iam_instance_profile" "jamfCredentialInstanceProfile" {
-  name = "jamfCredentialInstanceProfile"
-  role = aws_iam_role.jamfCredentialAccessRole.name
+resource "aws_iam_instance_profile" "mdmCredentialInstanceProfile" {
+  name = "mdmCredentialInstanceProfile"
+  role = aws_iam_role.mdmCredentialAccessRole.name
 }
 
-output "jamfCredentialsID" {
-  value = aws_ssm_parameter.jamfCredentialsTF.id
+output "mdmCredentialsID" {
+  value = aws_ssm_parameter.mdmCredentialsTF.id
 }

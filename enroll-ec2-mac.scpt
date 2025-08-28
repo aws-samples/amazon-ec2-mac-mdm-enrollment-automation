@@ -13,7 +13,7 @@
 --osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen
 
 --Important: either set your secret name in the MMSecretVar subroutine below, or via the following CLI command:
---defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"
+--defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "mdmSecretID-GoesHere"
 
 on MMSecretVar()
 	try
@@ -603,17 +603,19 @@ on run argv
 	end if
 	
 	if argv contains "--restart-agent" then
+		log "Restarting LaunchAgent…"
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
 	
 	if argv contains "--stop-agent" then
+		log "Stopping LaunchAgent…"
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
 	
 	set appName to "enroll-ec2-mac"
-	set jamfSecretID to my MMSecretVar()
+	set mdmSecretID to my MMSecretVar()
 	
 	--By default, enroll-ec2-mac uses AWS Secrets manager to retrieve credentials for runtime.
 	
@@ -627,14 +629,26 @@ on run argv
 	on error
 		set currentRegion to (my awsMD("placement/region"))
 	end try
-	set jamfServerDomain to my retrieveSecret(currentRegion, jamfSecretID, "jamfServerDomain")
-	set SDKUser to my retrieveSecret(currentRegion, jamfSecretID, "jamfEnrollmentUser")
-	set SDKPassword to my retrieveSecret(currentRegion, jamfSecretID, "jamfEnrollmentPassword")
-	set localAdmin to my retrieveSecret(currentRegion, jamfSecretID, "localAdmin")
-	set adminPass to my retrieveSecret(currentRegion, jamfSecretID, "localAdminPassword")
 	
-	set mdmServerDomain to jamfServerDomain
+	set templateType to "mdm"
+	set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, templateType & "ServerDomain")
+	set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentUser")
+	set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentPassword")
+	set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
+	set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
 	
+	try
+		--Basic test of validity of the server address.
+		my tripleDouble(mdmServerDomain)
+	on error
+		--Compatibility with legacy Secrets Manager templates.
+		set templateType to "jamf"
+		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, templateType & "ServerDomain")
+		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentUser")
+		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, templateType & "EnrollmentPassword")
+		set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
+		set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
+	end try
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
 	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
@@ -1057,7 +1071,7 @@ on run argv
 				end if
 				
 				
-				set jamfServerAddress to (my tripleDouble(jamfServerDomain))
+				set jamfServerAddress to (my tripleDouble(mdmServerDomain))
 				
 				--Initial check for an invitation code set inline or via plist.
 				set invitationID to my getInvitationID()
@@ -1230,6 +1244,7 @@ on run argv
 						end if
 						delay 0.2
 						tell application settingsApp to activate
+						delay 0.5
 						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 						delay 0.2
 						if useDEPNotify is true then
@@ -1277,7 +1292,7 @@ on run argv
 							delay 0.1
 							set the clipboard to localAdmin
 							keystroke "v" using command down
-							delay 0.1
+							delay 0.2
 						end if
 						keystroke return
 						--Immediately clear the clipboard of the password.

@@ -1,6 +1,6 @@
 # enroll-ec2-mac: Welcome!
 
-enroll-ec2-mac is an AppleScript made to **automatically enroll** [Amazon Web Services Elastic Compute Cloud (EC2) Mac instances](https://aws.amazon.com/ec2/instance-types/mac/) into a **mobile device management (MDM)** solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken for MDM enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included is a subroutine to automate the issuance and retrieval of **Jamf** enrollment profiles and more MDM providers below. 
+enroll-ec2-mac is an AppleScript made to **automatically enroll** [Amazon Web Services Elastic Compute Cloud (EC2) Mac instances](https://aws.amazon.com/ec2/instance-types/mac/) into a **mobile device management (MDM)** solution. enroll-ec2-mac is made to ensure the MDM “pairing“ relationship isn't broken for MDM enrollment. Without that pairing, an EC2 Mac instance isn’t able to ”listen“ for new or updated profiles from the MDM server. enroll-ec2-mac performs all of this without any user interaction after AMI configuration (as per the instructions below). Included are subroutines to automate the issuance and retrieval of **Jamf** and more MDM enrollment providers profiles below. 
 
 ---
 
@@ -21,23 +21,23 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 
 ### Credential Setup
 
-1. Gather the appropriate **credentials** and store them in **AWS Secrets Manager.** If you're using one of the templates, you'll be prompted for each of these. The default secret ID in the script is `jamfSecret`, and requires 5 values for the following keys (with sample values below):
-    1. `jamfServerDomain` `("jamfurl.jamfcloud.com")`
-        * Experimental: **Account-Driven Device Enrollment (ADDE)**? support is being introduced, first for an Okta workflow. Set `jamfServerDomain` to `adde-mm` and put your Managed Apple Account (MAA) details in the fields below.
-    2. `jamfEnrollmentUser` `("enrollmentUserExampleName")`
-    3. `jamfEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
+1. Gather the appropriate **credentials** and store them in **AWS Secrets Manager.** If you're using one of the templates, you'll be prompted for each of these. The default secret ID in the script is `mdmSecret`, and requires 5 values for the following keys (with sample values below):
+    1. `mdmServerDomain` `("mdm-server.mdmcloud.com")`
+        * Experimental: **Account-Driven Device Enrollment (ADDE)**? support is being introduced, first for an Okta workflow. Set `mdmServerDomain` to `adde-mm` and put your Managed Apple Account (MAA) details in the fields below.
+    2. `mdmEnrollmentUser` `("enrollmentUserExampleName")`
+    3. `mdmEnrollmentPassword` `("enrollment3x4mplep455w0rd")`
         * For Jamf Pro, these hold a Jamf API `client_id` and `client_secret` created in the **Jamf** console, and its role only requires **Create** permission for **Computer Enrollment Invitations**.
-        * Jamf API Client Credentials are required. The `jamfEnrollmentUser` field holds the **Client ID** and `jamfEnrollmentPassword` holds the **Client Secret**.
+        * Jamf API Client Credentials are required. The `mdmEnrollmentUser` field holds the **Client ID** and `mdmEnrollmentPassword` holds the **Client Secret**.
         * * *As of March 31st, 2024, Jamf Pro has deactivated Basic authentication by default, deprecating the use of Jamf Pro Standard Accounts for communicating with the API.  **API calls must now be performed with API roles and clients, unless explicitly reactivated in Jamf Pro settings**.*
         * Additional permissions for Jamf API are required for other optional features, such as preloading information and removing device records.
         
         * **Not using Jamf Pro as your MDM?**
           
-          * If using **Addigy**, set `jamfServerDomain` to the **path (URL) of your enrollment profile**, found in the Addigy console under *Add Devices -> Manual Device Enrollment -> Copy URL*. (`jamfEnrollmentUser` and `jamfEnrollmentPassword` may be left blank or set arbitrarily as these are not used in Addigy enrollment.)
-          * If using **Kandji**, set `jamfEnrollmentUser` to **ID of your desired blueprint** and `jamfEnrollmentPassword` to its **enrollment code**.
-          * If using **Fleet**, set `jamfServerDomain` to your Fleet URL beginning with `fleet=` (e.g. `fleet=myfleetserver.example.com`).
-            * For API token authentication, set `jamfEnrollmentUser` to `fleet-token` and `jamfEnrollmentPassword` to your API token.
-            * For username/password authentication, set `jamfEnrollmentUser` to the Fleet server account's email address and `jamfEnrollmentPassword` to the Fleet account's password.
+          * If using **Addigy**, set `mdmServerDomain` to the **path (URL) of your enrollment profile**, found in the Addigy console under *Add Devices -> Manual Device Enrollment -> Copy URL*. (`mdmEnrollmentUser` and `mdmEnrollmentPassword` may be left blank or set arbitrarily as these are not used in Addigy enrollment.)
+          * If using **Kandji**, set `mdmEnrollmentUser` to **ID of your desired blueprint** and `mdmEnrollmentPassword` to its **enrollment code**.
+          * If using **Fleet**, set `mdmServerDomain` to your Fleet URL beginning with `fleet=` (e.g. `fleet=myfleetserver.example.com`).
+            * For API token authentication, set `mdmEnrollmentUser` to `fleet-token` and `mdmEnrollmentPassword` to your API token.
+            * For username/password authentication, set `mdmEnrollmentUser` to the Fleet server account's email address and `mdmEnrollmentPassword` to the Fleet account's password.
           * Experimental: For Account-driven Device Enrollment (ADDE), fill in the credentials of the Managed Apple Account (MAA) set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
           * Support for additional MDMs will be added as available.
    
@@ -60,7 +60,7 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
 3. Enable **Automatically log in as** for the current user in **System Settings -> Users & Groups.**
 5. **Place** `enroll-ec2-mac.scpt` in `/Users/Shared`.
     1. IMPORTANT: Set the **secret ID** (either by name or with the complete [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html)) by manually setting `MMSecret` in the script, or writing the ID to a plist with the below command. 
-        - `defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecret-YOUR-SECRET-ID"` (replacing what's in quotes above with the name/ID or ARN of your secret.)
+        - `defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "mdmSecret-YOUR-SECRET-ID"` (replacing what's in quotes above with the name/ID or ARN of your secret.)
         - *This secret is the one your  **㊙️🪪 IAM Instance Profile** can access.*
         - *Unable to use Secrets Manager? Options for using Parameter Store (with CloudFormation and Terraform templates) or statically setting the variables are commented in the script runtime.*
 6. In **Terminal**, type the following command: 
@@ -114,8 +114,8 @@ to reload the LaunchAgent and re-run the task.
     sudo defaults write /Library/Preferences/com.jamfsoftware.jamf is_virtual_machine 0
     ```
 * The first spot to check during a script failure is the **㊙️🪪 IAM Instance Profile**: if the script hangs or crashes (any error regarding `“{{ }},{{ }}")`, it may not have access to the secrets it needs, or isn’t parsing them correctly. 
-    * To test, in Terminal, manually check the secret (changing `jamfSecret` to the name or ARN of your secret):
-        * `aws secretsmanager get-secret-value --secret-id jamfSecret --query SecretString`
+    * To test, in Terminal, manually check the secret (changing `mdmSecret` to the name or ARN of your secret):
+        * `aws secretsmanager get-secret-value --secret-id mdmSecret --query SecretString`
 * If using an **HTTP/HTTPS proxy** and only basic profiles appear (i.e. no Self Service or pushed apps, additional profiles assigned are not in System Settings), the proxy needs to be set for the `appstore` process itself. Use the code below to make the change, replacing "proxy.server.address.here:8080" with your proxy server and port (inside the quotes):
      ```sh
       PROXY_ADDRESS="proxy.server.address.here:8080"
@@ -135,11 +135,11 @@ to reload the LaunchAgent and re-run the task.
 
 enroll-ec2-mac has some options to customize to suit your deployment. To set any of these preferences, type `defaults write com.amazon.dsx.ec2.enrollment.automation `, the key, and the value. For example, to set your secret ID (the only required setting), the full command would be:
 
-`defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"` 
+`defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "mdmSecretID-GoesHere"` 
 
-(replacing `"jamfSecretID-GoesHere"` with your secret ID or ARN)
+(replacing `"mdmSecretID-GoesHere"` with your secret ID or ARN)
 
-- `MMSecret` is the ID of the secret for enroll-ec2-mac to read from. (default `jamfSecret`)
+- `MMSecret` is the ID of the secret for enroll-ec2-mac to read from. (default `mdmSecret`)
 - `invitationID` is a value for the Jamf invitation ID (numeric string). By default this is read/generated via Jamf API, but can be manually set.
 - - *Note: If an invitation ID is set, the Jamf API **will not be called.***
 - `retrievalType` changes how the secret is read. By default, this is set to `SecretsManager` (AWS Secrets Manager), but may be set to `ParameterStore` (AWS Systems Manager Parameter Store). (default `SecretsManager`)
@@ -151,7 +151,7 @@ enroll-ec2-mac has some options to customize to suit your deployment. To set any
 
 ## Manual Configuration for AWS Secrets Manager & IAM
 
-enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the MDM server URL (`jamfServerDomain`), API credentials (`jamfEnrollmentUser` & `jamfEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance **needs** an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets. 
+enroll-ec2-mac uses a single secret that contains 5 key/value pair entries: the MDM server URL (`mdmServerDomain`), API credentials (`mdmEnrollmentUser` & `mdmEnrollmentPassword`), and local admin credentials (`localAdmin` & `localAdminPassword`). The first three are required to generate the profile, and the final two to apply them to the Mac. Example values are in **Credential Setup** at the top of the page. The EC2 instance **needs** an appropriate **㊙️🪪 IAM instance profile** applied to itself to read these secrets. 
 
 The Jamf API permissions for enroll-ec2-mac *only* requires the client have **Create** permission for **Computer Enrollment Invitations**, and none else. See below for an example of an **㊙️🪪 IAM instance profile** including the appropriate access.
 
@@ -160,7 +160,7 @@ The Jamf API permissions for enroll-ec2-mac *only* requires the client have **Cr
 **Please ensure that you have replaced the ARN next to "Resource" with the full ARN of your secret.** If editing manually:
 * replace **`⚠️⇢region-name`** with the appropriate **AWS region** (e.g. `us-east-1`).
 * replace **`1111222233333`** with the appropriate **AWS account ID**.
-* replace `jamfSecret` with **your** applicable **Secret ID**.
+* replace `mdmSecret` with **your** applicable **Secret ID**.
 
 
 ```
@@ -177,7 +177,7 @@ The Jamf API permissions for enroll-ec2-mac *only* requires the client have **Cr
                 "secretsmanager:DescribeSecret"
             ],
             "Effect": "Allow",
-            "Resource": "arn:aws:secretsmanager:⚠️⇢region-name:111122223333:secret:jamfSecret",
+            "Resource": "arn:aws:secretsmanager:⚠️⇢region-name:111122223333:secret:mdmSecret",
             "Sid": ""
         }
     ]
