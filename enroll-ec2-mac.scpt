@@ -603,11 +603,13 @@ on run argv
 	end if
 	
 	if argv contains "--restart-agent" then
+		log "Restarting LaunchAgent…"
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist ; launchctl load -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
 	
 	if argv contains "--stop-agent" then
+		log "Stopping LaunchAgent…"
 		do shell script "launchctl unload -w /Library/LaunchAgents/com.amazon.dsx.ec2.enrollment.automation.startup.plist"
 		return
 	end if
