@@ -1062,7 +1062,7 @@ on run argv
 				end if
 				
 				
-				set jamfServerAddress to (my tripleDouble(jamfServerDomain))
+				set jamfServerAddress to (my tripleDouble(mdmServerDomain))
 				
 				--Initial check for an invitation code set inline or via plist.
 				set invitationID to my getInvitationID()
@@ -1235,6 +1235,7 @@ on run argv
 						end if
 						delay 0.2
 						tell application settingsApp to activate
+						delay 0.5
 						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 						delay 0.2
 						if useDEPNotify is true then
