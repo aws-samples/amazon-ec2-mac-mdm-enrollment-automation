@@ -13,7 +13,7 @@
 --osascript /Users/Shared/enroll-ec2-mac.scpt --setup --with-screen
 
 --Important: either set your secret name in the MMSecretVar subroutine below, or via the following CLI command:
---defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "jamfSecretID-GoesHere"
+--defaults write com.amazon.dsx.ec2.enrollment.automation MMSecret "mdmSecretID-GoesHere"
 
 on MMSecretVar()
 	try
@@ -613,7 +613,7 @@ on run argv
 	end if
 	
 	set appName to "enroll-ec2-mac"
-	set jamfSecretID to my MMSecretVar()
+	set mdmSecretID to my MMSecretVar()
 	
 	--By default, enroll-ec2-mac uses AWS Secrets manager to retrieve credentials for runtime.
 	
@@ -627,14 +627,19 @@ on run argv
 	on error
 		set currentRegion to (my awsMD("placement/region"))
 	end try
-	set jamfServerDomain to my retrieveSecret(currentRegion, jamfSecretID, "jamfServerDomain")
-	set SDKUser to my retrieveSecret(currentRegion, jamfSecretID, "jamfEnrollmentUser")
-	set SDKPassword to my retrieveSecret(currentRegion, jamfSecretID, "jamfEnrollmentPassword")
-	set localAdmin to my retrieveSecret(currentRegion, jamfSecretID, "localAdmin")
-	set adminPass to my retrieveSecret(currentRegion, jamfSecretID, "localAdminPassword")
-	
-	set mdmServerDomain to jamfServerDomain
-	
+	try
+		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, "mdmServerDomain")
+		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, "mdmEnrollmentUser")
+		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, "mdmEnrollmentPassword")
+		set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
+		set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
+	on error
+		set mdmServerDomain to my retrieveSecret(currentRegion, mdmSecretID, "jamfServerDomain")
+		set SDKUser to my retrieveSecret(currentRegion, mdmSecretID, "jamfEnrollmentUser")
+		set SDKPassword to my retrieveSecret(currentRegion, mdmSecretID, "jamfEnrollmentPassword")
+		set localAdmin to my retrieveSecret(currentRegion, mdmSecretID, "localAdmin")
+		set adminPass to my retrieveSecret(currentRegion, mdmSecretID, "localAdminPassword")
+	end try
 	--END CREDENTIAL RETRIEVAL ROUTINES--
 	
 	set pathPossibilities to "/Users/Shared/._enroll-ec2-mac:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/opt/homebrew/sbin:"
