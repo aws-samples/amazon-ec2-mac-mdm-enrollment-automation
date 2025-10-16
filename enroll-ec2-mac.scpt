@@ -1099,13 +1099,22 @@ on run argv
 				end if
 				my fleetEnrollment(fleetAddress, currentFleetToken)
 				--------END FLEET PROFILE ROUTINES--------				
-			else if mdmServerDomain contains "intune" then
-				--Intune requires 3 credentials to communicate with the API. Implementing here in a secondary secret.
-				set intuneSecret to SDKPassword
-				set {IntuneTenantID, IntuneClientID, IntuneClientSecret} to my retrieveSecret(currentRegion,intuneSecret)
-				my intunePreload(do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'")
-				--Download profile from Intune's Configurator page (SCEP) and make available
-				--Save download as /tmp/enrollmentProfile.mobileconfig
+			else if mdmServerDomain contains "intune=" then
+				set AppleScript's text item delimiters to "intune="
+				set IntuneTenantID to text item 2 of mdmServerDomain
+				set AppleScript's text item delimiters to ""
+				set IntuneClientID to SDKUser
+				set IntuneClientSecret to SDKPassword
+				my intunePreload(IntuneTenantID, IntuneClientID, IntuneClientSecret, (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'"))
+				--Download profile from Intune's Configurator page (SCEP) and make available to the instance. 
+				--Sample here using an S3 path.
+				try
+					set intuneProfileS3 to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation intuneProfileS3")
+					get intuneProfileS3
+				on error
+					set intuneProfileS3 to "mm-profile-1222/profile.mobileconfig"
+				end try
+				do shell script pathPrefix & " aws s3 cp s3://" & intuneProfileS3 & " /tmp/enrollmentProfile.mobileconfig"
 			else if mdmServerDomain contains "adde-mm" then
 				--------BEGIN ADDE ROUTINES--------
 				my accountDriven(SDKUser, SDKPassword, "device")
