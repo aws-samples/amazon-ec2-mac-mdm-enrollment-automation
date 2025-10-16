@@ -494,6 +494,61 @@ on fleetEnrollment(fleetServerIn, fleetAPITokenIn)
 	return profileXML
 end fleetEnrollment
 
+on encodeCharacter(theCharacter)
+	set theASCIINumber to (the ASCII number theCharacter)
+	set theHexList to {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"}
+	set theFirstItem to item ((theASCIINumber div 16) + 1) of theHexList
+	set theSecondItem to item ((theASCIINumber mod 16) + 1) of theHexList
+	return ("%" & theFirstItem & theSecondItem) as string
+end encodeCharacter
+
+on encodeText(theText, encodeCommonSpecialCharacters, encodeExtendedSpecialCharacters)
+	set theStandardCharacters to "abcdefghijklmnopqrstuvwxyz0123456789"
+	set theCommonSpecialCharacterList to "$+!'/?;&@=#%><{}\"~`^\\|*"
+	set theExtendedSpecialCharacterList to ".-_:"
+	set theAcceptableCharacters to theStandardCharacters
+	if encodeCommonSpecialCharacters is false then set theAcceptableCharacters to theAcceptableCharacters & theCommonSpecialCharacterList
+	if encodeExtendedSpecialCharacters is false then set theAcceptableCharacters to theAcceptableCharacters & theExtendedSpecialCharacterList
+	set theEncodedText to ""
+	repeat with theCurrentCharacter in theText
+		if theCurrentCharacter is in theAcceptableCharacters then
+			set theEncodedText to (theEncodedText & theCurrentCharacter)
+		else
+			set theEncodedText to (theEncodedText & my encodeCharacter(theCurrentCharacter)) as string
+		end if
+	end repeat
+	return theEncodedText
+end encodeText
+
+on intunePreload(GraphTenantID, GraphClientID, GraphClientSecret, incomingSerial)
+	
+	set GraphClientSecret to (encodeText(GraphClientSecret, true, false) as string)
+	
+	set JSONPreamble to "{\"overwriteImportedDeviceIdentities\": true,\"importedDeviceIdentities\": [{\"importedDeviceIdentifier\": \""
+	set JSONSuffix to "\",\"importedDeviceIdentityType\": \"serialNumber\",\"description\": \"New Device\"}]}"
+	set JSONGroupPreamble to "{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/"
+	set JSONGroupSuffix to "\"}"
+	set GraphBearerRaw to (do shell script "curl -X POST https://login.microsoftonline.com/" & GraphTenantID & "/oauth2/v2.0/token -H 'Accept: */*' -H 'Accept-Encoding: gzip, deflate' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive' -H 'Content-Type: application/x-www-form-urlencoded'  -H 'Host: login.microsoftonline.com' -H 'cache-control: no-cache' -d 'grant_type=client_credentials&client_id=" & GraphClientID & "&client_secret=" & GraphClientSecret & "&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default'")
+	
+	set AppleScript's text item delimiters to "access_token\":\""
+	set {GraphBearerPreamble, GraphBearerTokenRaw} to text items of GraphBearerRaw
+	set AppleScript's text item delimiters to ""
+	set GraphBTCount to (count characters of GraphBearerTokenRaw)
+	set GraphBearerToken to (characters 1 through (GraphBTCount - 2)) of GraphBearerTokenRaw as string
+	set GraphContentLength to (count characters of (JSONPreamble & incomingSerial & JSONSuffix))
+	
+	set GraphDeviceAllowlistResponse to (do shell script "curl -X POST https://graph.microsoft.com/beta/deviceManagement/importedDeviceIdentities/importDeviceIdentityList -H 'Accept: */*' -H 'Authorization: Bearer " & GraphBearerToken & "' -H 'Cache-Control: no-cache' -H 'Connection: keep-alive' -H 'Content-Length: " & GraphContentLength & "' -H 'Content-Type: application/json' -H 'Host: graph.microsoft.com' -H 'cache-control: no-cache' -d '" & JSONPreamble & incomingSerial & JSONSuffix & "'")
+	
+	if GraphDeviceAllowlistResponse contains "importedDeviceIdentityResult" then
+		set errorString to "Successfully added serial number to Intune corporate device identifiers."
+		set successFlag to 1
+	else
+		set successFlag to 0
+		set errorString to "Could not allowlist serial number in Intune."
+	end if
+	return errorString
+end intunePreload
+
 --visiLog sends messages to DEPNotify to update visual status.
 on visiLog(updateType, logMessage, privilegedName, privilegedPass)
 	try
@@ -1044,6 +1099,22 @@ on run argv
 				end if
 				my fleetEnrollment(fleetAddress, currentFleetToken)
 				--------END FLEET PROFILE ROUTINES--------				
+			else if mdmServerDomain contains "intune=" then
+				set AppleScript's text item delimiters to "intune="
+				set IntuneTenantID to text item 2 of mdmServerDomain
+				set AppleScript's text item delimiters to ""
+				set IntuneClientID to SDKUser
+				set IntuneClientSecret to SDKPassword
+				my intunePreload(IntuneTenantID, IntuneClientID, IntuneClientSecret, (do shell script "system_profiler SPHardwareDataType | grep 'Serial Number (system)' | awk '{print $NF}'"))
+				--Download profile from Intune's Configurator page (SCEP) and make available to the instance. 
+				--Sample here using an S3 path.
+				try
+					set intuneProfileS3 to (do shell script "defaults read com.amazon.dsx.ec2.enrollment.automation intuneProfileS3")
+					get intuneProfileS3
+				on error
+					set intuneProfileS3 to "mm-profile-1222/profile.mobileconfig"
+				end try
+				do shell script pathPrefix & " aws s3 cp s3://" & intuneProfileS3 & " /tmp/enrollmentProfile.mobileconfig"
 			else if mdmServerDomain contains "adde-mm" then
 				--------BEGIN ADDE ROUTINES--------
 				my accountDriven(SDKUser, SDKPassword, "device")
@@ -1160,7 +1231,7 @@ on run argv
 							end try
 						end repeat
 					end tell
-				else if macOSMajor is 15 then
+				else if macOSMajor is greater than 14 then
 					delay 2
 					repeat with sidebarSearch from 2 to 8
 						try
@@ -1189,7 +1260,7 @@ on run argv
 				delay 0.5
 				
 				if macOSMajor is greater than or equal to 13 then
-					--Ventura runtime starts here.
+					--Ventura+ runtime starts here.
 					tell application "System Events" to tell process settingsApp
 						
 						--Sequoia 15.2
@@ -1205,11 +1276,18 @@ on run argv
 								exit repeat
 							on error
 								try
-									--Sonoma b1
-									get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+									--Tahoe 26
+									get value of static text 2 of UI element 1 of row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 1
 									exit repeat
+								on error
+									
+									try
+										--Sonoma b1
+										get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+										exit repeat
+									end try
+									delay 0.2
 								end try
-								delay 0.2
 							end try
 						end repeat
 						delay 0.2
@@ -1220,8 +1298,13 @@ on run argv
 								--Sonoma b1
 								set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 							on error
-								--Sequoia 15.0
-								set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+								try
+									--Sequoia 15.0
+									set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+								on error
+									--Tahoe 26
+									set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 1
+								end try							
 							end try
 						end try
 						set {xPosition, yPosition} to position of profileCell
@@ -1244,7 +1327,7 @@ on run argv
 						end if
 						delay 0.2
 						tell application settingsApp to activate
-						delay 0.5
+						delay 1
 						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 						delay 0.2
 						if useDEPNotify is true then

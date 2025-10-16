@@ -38,6 +38,10 @@ Included are [AWS CloudFormation](https://aws.amazon.com/cloudformation/) and [H
           * If using **Fleet**, set `mdmServerDomain` to your Fleet URL beginning with `fleet=` (e.g. `fleet=myfleetserver.example.com`).
             * For API token authentication, set `mdmEnrollmentUser` to `fleet-token` and `mdmEnrollmentPassword` to your API token.
             * For username/password authentication, set `mdmEnrollmentUser` to the Fleet server account's email address and `mdmEnrollmentPassword` to the Fleet account's password.
+          * Experimental: if using **Microsoft Intune**, set `mdmServerDomain` to your Graph Tenant ID, beginning with `intune=` (e.g. `intune=00000000-1111-2222-33334444`).
+            * Set `mdmEnrollmentUser` to your Graph Client ID `fleet-token` and `mdmEnrollmentPassword` to your Graph Client Secret.
+            * This API account is required to add devices via "Corporate device identifiers", enabled by default in Microsoft Intune.
+            * Additionally, a SCEP profile downloaded from the Intune console (via Home → Devices → macOS → Enrollment → Apple Configurator (under Bulk Enrollment Methods) → Create a profile without user affinity → Export Profile at the top → SCEP profile) must be available to the instance. If using an S3 bucket, set the path (without the `s3://` prefix) using `defaults write com.amazon.dsx.ec2.enrollment.automation intuneProfileS3 "path-to/enrollmentProfile.mobileconfig"`, replacing the sample path with your own. Ensure that the instance is able to access the S3 bucket through its IAM instance profile.
           * Experimental: For Account-driven Device Enrollment (ADDE), fill in the credentials of the Managed Apple Account (MAA) set up with your identity provider, without two-factor authentication. More documentation of how to set up this enrollment account will be posted as this feature exits its experimental state.
           * Support for additional MDMs will be added as available.
    
