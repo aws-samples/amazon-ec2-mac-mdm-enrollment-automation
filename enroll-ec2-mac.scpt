@@ -1222,7 +1222,7 @@ on run argv
 							end try
 						end repeat
 					end tell
-				else if macOSMajor is 15 then
+				else if macOSMajor is greater than 14 then
 					delay 2
 					repeat with sidebarSearch from 2 to 8
 						try
@@ -1251,7 +1251,7 @@ on run argv
 				delay 0.5
 				
 				if macOSMajor is greater than or equal to 13 then
-					--Ventura runtime starts here.
+					--Ventura+ runtime starts here.
 					tell application "System Events" to tell process settingsApp
 						
 						--Sequoia 15.2
@@ -1267,11 +1267,18 @@ on run argv
 								exit repeat
 							on error
 								try
-									--Sonoma b1
-									get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+									--Tahoe 26
+									get value of static text 2 of UI element 1 of row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 1
 									exit repeat
+								on error
+									
+									try
+										--Sonoma b1
+										get value of static text 1 of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+										exit repeat
+									end try
+									delay 0.2
 								end try
-								delay 0.2
 							end try
 						end repeat
 						delay 0.2
@@ -1282,8 +1289,13 @@ on run argv
 								--Sonoma b1
 								set profileCell to row 2 of table 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
 							on error
-								--Sequoia 15.0
-								set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+								try
+									--Sequoia 15.0
+									set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
+								on error
+									--Tahoe 26
+									set profileCell to row 2 of outline 1 of scroll area 1 of group 2 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window 1
+								end try							
 							end try
 						end try
 						set {xPosition, yPosition} to position of profileCell
@@ -1306,7 +1318,7 @@ on run argv
 						end if
 						delay 0.2
 						tell application settingsApp to activate
-						delay 0.5
+						delay 1
 						do shell script pathPrefix & "cliclick dc:" & (xPosition + (xSize div 2)) & "," & (yPosition + (ySize div 2))
 						delay 0.2
 						if useDEPNotify is true then
